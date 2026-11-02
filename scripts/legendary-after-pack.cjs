@@ -78,11 +78,13 @@ async function afterPack(context) {
   }
 
   if (platform === "win32") {
-    const { execSync } = require("node:child_process");
+    const { rcedit } = require("rcedit");
     const exePath = path.join(context.appOutDir, "ArcadeX.exe");
     const iconPath = path.join(context.packager.projectDir, "build", "icon.ico");
+    const destIconPath = path.join(context.appOutDir, "app-icon.ico");
     try {
-      execSync(`rcedit "${exePath}" --set-icon "${iconPath}"`, { stdio: "inherit" });
+      await fs.copyFile(iconPath, destIconPath);
+      await rcedit(exePath, { icon: iconPath });
       console.log(`[afterPack] Successfully set ArcadeX icon on ${exePath}`);
     } catch (err) {
       console.warn(`[afterPack] rcedit warning:`, err.message);
