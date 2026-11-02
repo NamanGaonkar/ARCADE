@@ -40,9 +40,9 @@ const addGameToLibrary = async (
   platform?: string | null
 ) => {
   const gameKey = levelKeys.game(shop, objectId);
-  let game = await gamesSublevel.get(gameKey);
+  let game = (await gamesSublevel.get(gameKey).catch(() => null)) as any;
 
-  const gameAssets = await gamesShopAssetsSublevel.get(gameKey);
+  const gameAssets = await gamesShopAssetsSublevel.get(gameKey).catch(() => null);
 
   const resolvedPlatform =
     platform ??

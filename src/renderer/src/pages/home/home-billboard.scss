@@ -6,6 +6,7 @@
   width: 100%;
   padding: 0 calc(globals.$spacing-unit * 3);
   margin-top: calc(globals.$spacing-unit * 2);
+  margin-bottom: calc(globals.$spacing-unit * 2.5);
   min-height: 380px;
 
   &--skeleton {

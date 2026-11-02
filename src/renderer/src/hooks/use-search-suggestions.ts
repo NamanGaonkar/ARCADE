@@ -91,7 +91,7 @@ export function useSearchSuggestions(
       limit: number = 3,
       shopParam: SuggestionShop = "steam"
     ) => {
-      if (!searchQuery.trim() || searchQuery.length < 2) {
+      if (!searchQuery.trim() || searchQuery.length < 1) {
         setSuggestions([]);
         setIsLoading(false);
         return;
@@ -155,11 +155,11 @@ export function useSearchSuggestions(
   );
 
   const debouncedFetchCatalogue = useRef(
-    debounce(fetchCatalogueSuggestions, 300)
+    debounce(fetchCatalogueSuggestions, 120)
   ).current;
 
   useEffect(() => {
-    if (!enabled || !query || query.length < 2) {
+    if (!enabled || !query || query.length < 1) {
       setSuggestions([]);
       setIsLoading(false);
       abortControllerRef.current?.abort();

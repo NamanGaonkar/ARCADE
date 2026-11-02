@@ -29,7 +29,6 @@ import {
   logger,
   migrateCloudSaveAutomaticSyncDefaults,
 } from "@main/services";
-import { migrateDownloadSources } from "./helpers/migrate-download-sources";
 import { getDirSize } from "./services/download/helpers";
 import { isDebridPendingError } from "./services/download/debrid-files";
 import { GofileApi } from "./services/hosters";
@@ -129,7 +128,8 @@ export const loadState = async () => {
   } catch (err) {
     logger.warn("Epic integration initialization failed on startup", err);
   }
-  void migrateDownloadSources();
+  // Local download sources are managed strictly offline with deduplication
+  // void migrateDownloadSources();
 
   // Check for new download options on startup (if enabled)
   (async () => {

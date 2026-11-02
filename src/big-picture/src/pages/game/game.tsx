@@ -6,7 +6,7 @@ import {
   getSkuRegionFlag,
   type SkuRegion,
 } from "@renderer/helpers";
-import type { GameShop, ShopAssets, LibraryGame } from "@types";
+import type { GameShop, LibraryGame } from "@types";
 import {
   hasCloudSaveExecutableSelection,
   getEpicLaunchOptions,
@@ -25,23 +25,14 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   buildLibraryToastOptions,
-  getBigPictureGameDetailsPath,
   getItemFocusTarget,
 } from "../../helpers";
-import {
-  getSimilarGamesSectionState,
-  SIMILAR_GAMES_LIMIT,
-} from "@renderer/hooks/similar-games";
-import { useSimilarGames } from "@renderer/hooks/use-similar-games";
 import type { LibraryToastSource } from "../../helpers/library-toast";
 import {
   Typography,
   VerticalFocusGroup,
   Divider,
   FocusItem,
-  FocusCarousel,
-  Skeleton,
-  EmptyState,
 } from "../../components";
 import {
   ConfirmationModal,
@@ -94,7 +85,6 @@ import {
   GAME_SIDEBAR_REGION_ID,
   GAME_SIDEBAR_REQUIREMENTS_ID,
   GAME_SIDEBAR_STATS_ID,
-  getGameSimilarGameItemId,
 } from "../../components/pages/game/navigation";
 import { NavigationService, type FocusOverrideTarget } from "../../services";
 import { useNavigationStore } from "../../stores";
@@ -455,67 +445,6 @@ function buildDescriptionSections(document: Document | null) {
   return sections;
 }
 
-function SimilarGamesSkeleton({ title }: Readonly<{ title: string }>) {
-  return (
-    <section
-      className="focus-carousel game-page__similar-games-skeleton"
-      data-card-variant="vertical"
-      aria-label={title}
-      aria-busy="true"
-    >
-      <div className="focus-carousel__header">
-        <h2 className="focus-carousel__title">{title}</h2>
-        <div
-          className="game-page__similar-games-skeleton-actions"
-          aria-hidden="true"
-        >
-          <Skeleton />
-          <Skeleton />
-        </div>
-      </div>
-
-      <div className="focus-carousel__viewport-wrapper">
-        <div className="focus-carousel__viewport">
-          <div className="focus-carousel__container">
-            {Array.from({ length: SIMILAR_GAMES_LIMIT }, (_, index) => (
-              <article
-                className="focus-carousel__slide"
-                key={`similar-game-skeleton-${index}`}
-              >
-                <div className="game-page__similar-games-skeleton-card">
-                  <Skeleton className="game-page__similar-games-skeleton-cover" />
-                  <div className="game-page__similar-games-skeleton-body">
-                    <Skeleton className="game-page__similar-games-skeleton-title" />
-                    <Skeleton className="game-page__similar-games-skeleton-subtitle" />
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function SimilarGamesEmptyState({
-  title,
-  message,
-}: Readonly<{ title: string; message: string }>) {
-  return (
-    <section className="focus-carousel game-page__similar-games-empty">
-      <div className="focus-carousel__header">
-        <h2 className="focus-carousel__title">{title}</h2>
-      </div>
-
-      <EmptyState
-        className="game-page__similar-games-empty-state"
-        title={message}
-      />
-    </section>
-  );
-}
-
 export default function Game() {
   const { t } = useTranslation("big_picture");
   const { showErrorToast, showSuccessToast, showWarningToast } =
@@ -858,37 +787,7 @@ export default function Game() {
   const shopGenres = useMemo(() => {
     return extractGenreNames(shopDetails?.genres ?? []);
   }, [shopDetails?.genres]);
-  const {
-    games: similarGames,
-    isLoading: areSimilarGamesLoading,
-    isEligible: areSimilarGamesEligible,
-  } = useSimilarGames({
-    objectId: catalogueGame.objectId,
-    shop: catalogueGame.shop,
-  });
-  const similarCarouselGames = useMemo<ShopAssets[]>(
-    () =>
-      similarGames.map((similarGame) => ({
-        objectId: similarGame.objectId,
-        shop: similarGame.shop,
-        title: similarGame.title,
-        iconUrl: similarGame.iconUrl,
-        libraryHeroImageUrl: similarGame.libraryHeroImageUrl,
-        libraryImageUrl: similarGame.libraryImageUrl,
-        logoImageUrl: similarGame.logoImageUrl,
-        logoPosition: null,
-        coverImageUrl: similarGame.coverImageUrl,
-        downloadSources: similarGame.downloadSources,
-      })),
-    [similarGames]
-  );
-  const similarGamesSectionState = getSimilarGamesSectionState(
-    areSimilarGamesEligible,
-    areSimilarGamesLoading,
-    similarCarouselGames.length
-  );
-  const hasSimilarGames = similarGamesSectionState === "ready";
-  const shouldRenderSimilarGames = similarGamesSectionState !== "hidden";
+  const hasSimilarGames = false;
   const launchboxRegions = useMemo(
     () =>
       shopDetails?.skus && shopDetails.skus.length > 0
@@ -1021,50 +920,6 @@ export default function Game() {
     similarGamesEntryTarget,
   ]);
 
-  const similarGamesTopNavigationTarget = useMemo<FocusOverrideTarget>(() => {
-    if (descriptionBottomEntryTarget) return descriptionBottomEntryTarget;
-    if (activeMediaItemId) return getItemFocusTarget(activeMediaItemId);
-
-    if (hasMedia) {
-      return {
-        type: "region",
-        regionId: GAME_MEDIA_CAROUSEL_REGION_ID,
-        entryDirection: "up",
-        preferRememberedFocus: true,
-      };
-    }
-
-    return heroActionsLeftNavigationTarget;
-  }, [
-    activeMediaItemId,
-    descriptionBottomEntryTarget,
-    hasMedia,
-    heroActionsLeftNavigationTarget,
-  ]);
-
-  const getSimilarGameNavigationOverrides = useCallback(
-    (_similarGame: ShopAssets, index: number, games: ShopAssets[]) => ({
-      up: similarGamesTopNavigationTarget,
-      down: commentsEntryTarget ?? ({ type: "block" } as const),
-      ...(index === 0
-        ? { left: getItemFocusTarget(BIG_PICTURE_SIDEBAR_ITEM_IDS.home) }
-        : {}),
-      ...(index === games.length - 1
-        ? { right: { type: "block" as const } }
-        : {}),
-    }),
-    [commentsEntryTarget, similarGamesTopNavigationTarget]
-  );
-  const getSimilarGameItemId = useCallback(
-    (similarGame: ShopAssets) =>
-      getGameSimilarGameItemId(
-        shop!,
-        objectId!,
-        similarGame.shop,
-        similarGame.objectId
-      ),
-    [objectId, shop]
-  );
   useHeaderTitle(resolvedGameTitle);
 
   const handleOpenDownloadModal = useCallback(() => {
@@ -1976,39 +1831,6 @@ export default function Game() {
                   </FocusItem>
                 </VerticalFocusGroup>
               )}
-
-              {shouldRenderSimilarGames ? (
-                <>
-                  <Divider />
-                  <div className="game-page__similar-games">
-                    {similarGamesSectionState === "loading" ? (
-                      <SimilarGamesSkeleton title={t("similar_games")} />
-                    ) : null}
-                    {similarGamesSectionState === "empty" ? (
-                      <SimilarGamesEmptyState
-                        title={t("similar_games")}
-                        message={t("no_similar_games")}
-                      />
-                    ) : null}
-                    {similarGamesSectionState === "ready" ? (
-                      <FocusCarousel
-                        title={t("similar_games")}
-                        cardVariant="vertical"
-                        games={similarCarouselGames}
-                        regionId={GAME_SIMILAR_GAMES_REGION_ID}
-                        getItemId={getSimilarGameItemId}
-                        getItemNavigationOverrides={
-                          getSimilarGameNavigationOverrides
-                        }
-                        onItemActivate={(similarGame) =>
-                          navigate(getBigPictureGameDetailsPath(similarGame))
-                        }
-                        showRightFade
-                      />
-                    ) : null}
-                  </div>
-                </>
-              ) : null}
 
               {!isCustomGame && (
                 <>

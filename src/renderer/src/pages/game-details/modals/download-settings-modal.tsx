@@ -243,11 +243,23 @@ const getProviderTorrentFiles = (
   magnetUri: string,
   downloader: Downloader | null
 ) => {
-  if (downloader === Downloader.Torrent) {
-    return window.electron.getTorrentFiles(magnetUri);
-  }
+  const timeoutPromise = new Promise<{ ok: false; error: string }>((resolve) =>
+    setTimeout(
+      () =>
+        resolve({
+          ok: false,
+          error: "torrent_files_unavailable",
+        }),
+      5000
+    )
+  );
 
-  return window.electron.getDebridFiles(magnetUri, downloader!);
+  const fetchPromise =
+    downloader === Downloader.Torrent
+      ? window.electron.getTorrentFiles(magnetUri)
+      : window.electron.getDebridFiles(magnetUri, downloader!);
+
+  return Promise.race([fetchPromise, timeoutPromise]);
 };
 
 const MAX_CACHED_TORRENT_MANIFESTS = 20;

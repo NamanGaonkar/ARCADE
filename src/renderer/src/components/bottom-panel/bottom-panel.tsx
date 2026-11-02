@@ -76,43 +76,54 @@ export function BottomPanel() {
       }
     }
 
-    const game = lastPacket
-      ? library.find((game) => game.id === lastPacket?.gameId)
+    const targetId = lastPacket?.gameId ? String(lastPacket.gameId) : "";
+    const game = targetId
+      ? library.find(
+          (g) =>
+            g.id === targetId ||
+            g.id === `game:${targetId}` ||
+            `${g.shop}:${g.objectId}` === targetId ||
+            g.objectId === targetId ||
+            ((lastPacket?.download as any)?.title &&
+              g.title?.toLowerCase() === (lastPacket?.download as any).title.toLowerCase())
+        )
       : undefined;
 
-    if (game) {
+    const title = game?.title || (lastPacket?.download as any)?.title;
+
+    if (title) {
       if (lastPacket?.isRecovering)
         return t("recovering", {
-          title: game.title,
+          title,
           percentage: `${Math.round((lastPacket.recoveryProgress ?? 0) * 100)}%`,
         });
 
       if (lastPacket?.isReconnecting)
         return t("reconnecting", {
-          title: game.title,
+          title,
         });
 
       if (lastPacket?.isCheckingFiles)
         return t("checking_files", {
-          title: game.title,
+          title,
           percentage: progress,
         });
 
       if (lastPacket?.isDownloadingMetadata)
         return t("downloading_metadata", {
-          title: game.title,
+          title,
           percentage: progress,
         });
 
       if (!eta) {
         return t("calculating_eta", {
-          title: game.title,
+          title,
           percentage: progress,
         });
       }
 
       return t("downloading", {
-        title: game.title,
+        title,
         percentage: progress,
         eta,
         speed: downloadSpeed,

@@ -195,6 +195,42 @@ export const seedDownloadSources = async (
 ): Promise<void> => {
   logger.info("[DownloadSourcesStorage] Starting initial sources seeding routine...");
 
+  // 1. Purge stale duplicate keys from previous migrations/runs
+  try {
+    const existingEntries: Array<{ key: string; value: DownloadSource }> = [];
+    for await (const [key, value] of downloadSourcesSublevel.iterator()) {
+      existingEntries.push({ key, value });
+    }
+
+    const groupedByName = new Map<string, Array<{ key: string; value: DownloadSource }>>();
+    for (const entry of existingEntries) {
+      const normName = (entry.value.name || "").toLowerCase().trim();
+      if (!groupedByName.has(normName)) {
+        groupedByName.set(normName, []);
+      }
+      groupedByName.get(normName)!.push(entry);
+    }
+
+    for (const [_name, entries] of groupedByName) {
+      if (entries.length > 1) {
+        // Sort: keep the one with Matched status or highest downloadCount
+        entries.sort((a, b) => {
+          const aCount = a.value.downloadCount || 0;
+          const bCount = b.value.downloadCount || 0;
+          return bCount - aCount;
+        });
+
+        const duplicates = entries.slice(1);
+        for (const dup of duplicates) {
+          logger.info(`[DownloadSourcesStorage] Purging duplicate source key: ${dup.key} (${dup.value.name})`);
+          await downloadSourcesSublevel.del(dup.key).catch(() => {});
+        }
+      }
+    }
+  } catch (err) {
+    logger.warn("[DownloadSourcesStorage] Error during duplicate source cleanup:", err);
+  }
+
   const dir = getSourcesDir();
   const existingFiles = await fs.promises.readdir(dir).catch(() => []);
 

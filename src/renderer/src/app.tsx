@@ -180,11 +180,16 @@ export function App() {
   useEffect(() => {
     if (!lastPacket?.gameId) return;
 
+    const targetId = String(lastPacket.gameId);
     const activeGame = downloadLibrary.find(
-      (game) => game.id === lastPacket.gameId
+      (game) =>
+        game.id === targetId ||
+        game.id === `game:${targetId}` ||
+        `${game.shop}:${game.objectId}` === targetId ||
+        game.objectId === targetId
     );
 
-    if (!activeGame || activeGame.download?.status !== "active") {
+    if (activeGame?.download?.status && activeGame.download.status !== "active") {
       clearDownload();
     }
   }, [clearDownload, lastPacket?.gameId, downloadLibrary]);

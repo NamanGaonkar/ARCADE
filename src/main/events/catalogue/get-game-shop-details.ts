@@ -47,7 +47,7 @@ const applyArtworkToAssets = async (
     const key = levelKeys.game(shop, objectId);
     assets = await resolveEpicDefaultArtwork(
       assets,
-      await gamesShopAssetsSublevel.get(key)
+      await gamesShopAssetsSublevel.get(key).catch(() => null)
     );
     await gamesShopAssetsSublevel.put(key, {
       ...assets,
@@ -56,9 +56,9 @@ const applyArtworkToAssets = async (
   }
 
   const selectedIdentity = artworkIdentity ?? { shop, objectId };
-  const selection = await gamesArtworkSelectionSublevel.get(
-    levelKeys.game(selectedIdentity.shop, selectedIdentity.objectId)
-  );
+  const selection = await gamesArtworkSelectionSublevel
+    .get(levelKeys.game(selectedIdentity.shop, selectedIdentity.objectId))
+    .catch(() => null);
 
   return composeAssetsWithArtwork(assets, selection);
 };
@@ -161,10 +161,12 @@ const getLaunchboxShopDetails = async (
   language: string
 ): Promise<ShopDetailsWithAssets | null> => {
   const [cachedData, cachedAssets] = await Promise.all([
-    gamesShopCacheSublevel.get(
-      levelKeys.gameShopCacheItem(shop, objectId, language)
-    ),
-    gamesShopAssetsSublevel.get(levelKeys.game(shop, objectId)),
+    gamesShopCacheSublevel
+      .get(levelKeys.gameShopCacheItem(shop, objectId, language))
+      .catch(() => null),
+    gamesShopAssetsSublevel
+      .get(levelKeys.game(shop, objectId))
+      .catch(() => null),
   ]);
 
   const cacheHasNewFields =
@@ -336,10 +338,12 @@ const getGameShopDetails = async (
     const steamLanguage = getSteamLanguage(language);
 
     const [cachedData, cachedAssets] = await Promise.all([
-      gamesShopCacheSublevel.get(
-        levelKeys.gameShopCacheItem(shop, objectId, steamLanguage)
-      ),
-      gamesShopAssetsSublevel.get(levelKeys.game(shop, objectId)),
+      gamesShopCacheSublevel
+        .get(levelKeys.gameShopCacheItem(shop, objectId, steamLanguage))
+        .catch(() => null),
+      gamesShopAssetsSublevel
+        .get(levelKeys.game(shop, objectId))
+        .catch(() => null),
     ]);
 
     const appDetails = getSteamAppDetails(objectId, language).then(async (result) => {
@@ -520,10 +524,12 @@ const getGameShopDetails = async (
     const cacheLanguage = language;
     const path = `/games/${shop}/${encodeURIComponent(objectId)}/shop-details`;
     const [cachedData, cachedAssets] = await Promise.all([
-      gamesShopCacheSublevel.get(
-        levelKeys.gameShopCacheItem(shop, objectId, cacheLanguage)
-      ),
-      gamesShopAssetsSublevel.get(levelKeys.game(shop, objectId)),
+      gamesShopCacheSublevel
+        .get(levelKeys.gameShopCacheItem(shop, objectId, cacheLanguage))
+        .catch(() => null),
+      gamesShopAssetsSublevel
+        .get(levelKeys.game(shop, objectId))
+        .catch(() => null),
     ]);
 
     const appDetails = (async () => {

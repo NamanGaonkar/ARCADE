@@ -225,7 +225,10 @@ export function useGameDetails(
     async ({
       showLoadingState = false,
     }: { showLoadingState?: boolean } = {}) => {
-      await Promise.all([updateGame(), fetchGameDetails({ showLoadingState })]);
+      await Promise.all([
+        updateGame().catch(() => null),
+        fetchGameDetails({ showLoadingState }).catch(() => null),
+      ]);
     },
     [fetchGameDetails, updateGame]
   );

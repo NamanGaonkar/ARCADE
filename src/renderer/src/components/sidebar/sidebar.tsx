@@ -37,6 +37,8 @@ import {
   CheckCircleFillIcon,
   CheckCircleIcon,
   VideoIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "@primer/octicons-react";
 import { Tooltip } from "react-tooltip";
 import deckyIcon from "@renderer/assets/icons/decky.png";
@@ -100,6 +102,18 @@ export function Sidebar() {
   const [sidebarWidth, setSidebarWidth] = useState(
     initialSidebarWidth ? Number(initialSidebarWidth) : SIDEBAR_INITIAL_WIDTH
   );
+
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem("sidebar-collapsed") === "true";
+  });
+
+  const toggleCollapsed = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("sidebar-collapsed", String(next));
+      return next;
+    });
+  };
 
   const location = useLocation();
 
@@ -482,11 +496,12 @@ export function Sidebar() {
       className={cn("sidebar", {
         "sidebar--resizing": isResizing,
         "sidebar--darwin": window.electron.platform === "darwin",
+        "sidebar--collapsed": isCollapsed,
       })}
       style={{
-        width: sidebarWidth,
-        minWidth: sidebarWidth,
-        maxWidth: sidebarWidth,
+        width: isCollapsed ? 68 : sidebarWidth,
+        minWidth: isCollapsed ? 68 : sidebarWidth,
+        maxWidth: isCollapsed ? 68 : sidebarWidth,
       }}
     >
       {globalThis.window.electron.platform === "darwin" && (
@@ -504,23 +519,41 @@ export function Sidebar() {
         <div className="sidebar__content">
           <section className="sidebar__section">
             <ul className="sidebar__menu">
+              <li className="sidebar__menu-item sidebar__collapse-item">
+                <button
+                  type="button"
+                  className="sidebar__menu-item-button sidebar__collapse-button"
+                  onClick={toggleCollapsed}
+                  data-tooltip-id="sidebar-nav-tooltip"
+                  data-tooltip-content={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                  aria-label="Toggle sidebar"
+                >
+                  {isCollapsed ? <ChevronRightIcon size={16} /> : <ChevronLeftIcon size={16} />}
+                  <span>{isCollapsed ? "Expand" : "Collapse"}</span>
+                </button>
+              </li>
+
               {routes.map(({ nameKey, path, render }) => (
-                  <li
-                    key={nameKey}
-                    className={cn("sidebar__menu-item", {
-                      "sidebar__menu-item--active": location.pathname === path,
-                    })}
+                <li
+                  key={nameKey}
+                  className={cn("sidebar__menu-item", {
+                    "sidebar__menu-item--active": location.pathname === path,
+                  })}
+                >
+                  <button
+                    type="button"
+                    className="sidebar__menu-item-button"
+                    onClick={() => handleSidebarItemClick(path)}
+                    data-tooltip-id="sidebar-nav-tooltip"
+                    data-tooltip-content={t(nameKey)}
                   >
-                    <button
-                      type="button"
-                      className="sidebar__menu-item-button"
-                      onClick={() => handleSidebarItemClick(path)}
-                    >
-                      {render()}
-                      <span>{t(nameKey)}</span>
-                    </button>
-                  </li>
-                ))}
+                    {render()}
+                    <span>{t(nameKey)}</span>
+                  </button>
+                </li>
+              ))}
+
+              <Tooltip id="sidebar-nav-tooltip" place="right" />
 
               {window.electron.platform === "linux" && homebrewFolderExists && (
                 <li className="sidebar__menu-item sidebar__menu-item--decky">

@@ -123,7 +123,7 @@ export function Header() {
   const { suggestions, isLoading: isLoadingSuggestions } = useSearchSuggestions(
     deferredSearchValue,
     isOnLibraryPage,
-    isDropdownVisible && isFocused && !isOnCataloguePage,
+    (isDropdownVisible || isFocused) && !isOnCataloguePage,
     suggestionShop
   );
 
@@ -216,6 +216,11 @@ export function Header() {
 
     setLocalSearchValue(normalizedValue);
     setActiveIndex(-1);
+
+    if (normalizedValue.trim().length > 0) {
+      updateDropdownPosition();
+      setIsDropdownVisible(true);
+    }
 
     if (isOnLibraryPage) {
       debouncedCatalogueSearch.cancel();

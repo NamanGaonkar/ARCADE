@@ -24,13 +24,33 @@ export function SettingsDownloadSources() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
+  const deduplicateSources = (sources: DownloadSource[]): DownloadSource[] => {
+    const map = new Map<string, DownloadSource>();
+    for (const source of sources) {
+      const key = (source.name || "").toLowerCase().trim();
+      if (!map.has(key)) {
+        map.set(key, source);
+      } else {
+        const existing = map.get(key)!;
+        if ((source.downloadCount || 0) > (existing.downloadCount || 0)) {
+          // Clean up stale duplicate from LevelDB
+          levelDBService.del("downloadSources", existing.id).catch(() => {});
+          map.set(key, source);
+        } else {
+          levelDBService.del("downloadSources", source.id).catch(() => {});
+        }
+      }
+    }
+    return orderBy(Array.from(map.values()), "createdAt", "desc");
+  };
+
   useEffect(() => {
     const fetchDownloadSources = async () => {
       const sources = (await levelDBService.values(
         "downloadSources"
       )) as DownloadSource[];
-      const sorted = orderBy(sources, "createdAt", "desc");
-      setDownloadSources(sorted);
+      const deduped = deduplicateSources(sources);
+      setDownloadSources(deduped);
       setHasLoadedDownloadSources(true);
     };
 
@@ -54,8 +74,8 @@ export function SettingsDownloadSources() {
         const sources = (await levelDBService.values(
           "downloadSources"
         )) as DownloadSource[];
-        const sorted = orderBy(sources, "createdAt", "desc");
-        setDownloadSources(sorted);
+        const deduped = deduplicateSources(sources);
+        setDownloadSources(deduped);
       } catch (error) {
         logger.error("Failed to fetch download sources:", error);
       }
@@ -72,8 +92,8 @@ export function SettingsDownloadSources() {
       const sources = (await levelDBService.values(
         "downloadSources"
       )) as DownloadSource[];
-      const sorted = orderBy(sources, "createdAt", "desc");
-      setDownloadSources(sorted);
+      const deduped = deduplicateSources(sources);
+      setDownloadSources(deduped);
 
       showSuccessToast(t("download_sources_synced_successfully"));
     } finally {

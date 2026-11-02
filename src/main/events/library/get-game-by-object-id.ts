@@ -17,8 +17,8 @@ const getGameByObjectId = async (
 ) => {
   const gameKey = levelKeys.game(shop, objectId);
   const [storedGame, download] = await Promise.all([
-    gamesSublevel.get(gameKey),
-    downloadsSublevel.get(gameKey),
+    gamesSublevel.get(gameKey).catch(() => null),
+    downloadsSublevel.get(gameKey).catch(() => null),
   ]);
 
   if (!storedGame) return null;

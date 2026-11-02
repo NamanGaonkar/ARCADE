@@ -80,12 +80,48 @@ export const LibraryGameCard = memo(function LibraryGameCard({
 
   const [dynamicCover, setDynamicCover] = useState<string | null>(null);
 
+  const isHorizontalCover = (url?: string | null) => {
+    if (!url) return false;
+    const lower = url.toLowerCase();
+    return (
+      lower.includes("/header") ||
+      lower.includes("/capsule") ||
+      lower.includes("header_292x136") ||
+      lower.includes("heroes") ||
+      lower.includes("/hero/") ||
+      lower.includes("background") ||
+      lower.includes("banner") ||
+      lower.includes("920x430") ||
+      lower.includes("460x215")
+    );
+  };
+
+  const steamVerticalFallback =
+    game.shop === "steam" && game.objectId
+      ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.objectId}/library_600x900.jpg`
+      : null;
+
+  const validLibraryImageUrl =
+    game.libraryImageUrl && !isHorizontalCover(game.libraryImageUrl)
+      ? game.libraryImageUrl
+      : null;
+
+  const validCoverImageUrl =
+    game.coverImageUrl && !isHorizontalCover(game.coverImageUrl)
+      ? game.coverImageUrl
+      : null;
+
   const candidates = [
-    { url: game.customCoverImageUrl, isChosenCover: true }, // Level 0
-    { url: game.coverImageUrl, isChosenCover: hasPickedCover }, // Level 1
+    { url: game.customCoverImageUrl, isChosenCover: true },
+    { url: hasPickedCover && validCoverImageUrl ? validCoverImageUrl : null, isChosenCover: hasPickedCover },
     { url: dynamicCover, isChosenCover: false },
-    { url: game.libraryImageUrl, isChosenCover: false }, // Level 2
-    { url: game.iconUrl, isChosenCover: false }, // Level 3
+    { url: steamVerticalFallback, isChosenCover: false },
+    { url: validLibraryImageUrl, isChosenCover: false },
+    { url: validCoverImageUrl, isChosenCover: false },
+    { url: game.iconUrl, isChosenCover: false },
+    // Absolute last resort fallbacks if vertical not found
+    { url: game.libraryImageUrl, isChosenCover: false },
+    { url: game.coverImageUrl, isChosenCover: false },
   ].filter(({ url }) => url && url.trim() !== "");
 
   const sources = candidates.map(({ url }) => url);
@@ -175,8 +211,9 @@ export const LibraryGameCard = memo(function LibraryGameCard({
       window.electron
         .getSteamGridDBArtwork(game.title, game.objectId)
         .then((art) => {
-          if (art?.libraryImageUrl) {
-            setDynamicCover(art.libraryImageUrl);
+          const resolved = art?.libraryImageUrl || art?.coverImageUrl;
+          if (resolved) {
+            setDynamicCover(resolved);
             setFallbackIndex(0);
             setImageError(false);
           } else {
