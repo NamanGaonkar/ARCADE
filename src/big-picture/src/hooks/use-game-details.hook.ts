@@ -167,22 +167,19 @@ export function useGameDetails(
       }
 
       try {
-        const shopDetailsPromise =
-          catalogueShop === "custom"
-            ? Promise.resolve(null)
-            : globalThis.window.electron
-                .getGameShopDetails(
-                  catalogueObjectId,
-                  catalogueShop,
-                  language,
-                  {
-                    artworkIdentity: {
-                      shop: artworkShop,
-                      objectId: artworkObjectId,
-                    },
-                  }
-                )
-                .catch(() => null);
+        const shopDetailsPromise = globalThis.window.electron
+          .getGameShopDetails(
+            catalogueObjectId,
+            catalogueShop,
+            language,
+            {
+              artworkIdentity: {
+                shop: artworkShop,
+                objectId: artworkObjectId,
+              },
+            }
+          )
+          .catch(() => null);
 
         const [statsResult, assets, shopDetailsResult] = await Promise.all([
           catalogueShop === "custom"

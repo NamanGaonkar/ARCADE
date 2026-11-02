@@ -27,11 +27,15 @@ export function GameItem({ game }: GameItemProps) {
   const { steamGenres } = useAppSelector((state) => state.catalogueSearch);
 
   const [isAddingToLibrary, setIsAddingToLibrary] = useState(false);
-
   const [added, setAdded] = useState(false);
+  const [coverUrl, setCoverUrl] = useState<string | null>(game.libraryImageUrl || null);
 
   const { library, updateLibrary } = useLibrary();
   const shouldShowProtonFeatures = window.electron.platform === "linux";
+
+  useEffect(() => {
+    setCoverUrl(game.libraryImageUrl || null);
+  }, [game.libraryImageUrl]);
 
   useEffect(() => {
     const exists = library.some(
@@ -61,6 +65,19 @@ export function GameItem({ game }: GameItemProps) {
     }
   };
 
+  const handleImageError = () => {
+    if (game.title) {
+      window.electron
+        .getSteamGridDBArtwork(game.title, game.objectId)
+        .then((art) => {
+          if (art?.libraryImageUrl || art?.coverImageUrl || art?.iconUrl) {
+            setCoverUrl(art.libraryImageUrl || art.coverImageUrl || art.iconUrl);
+          }
+        })
+        .catch(() => {});
+    }
+  };
+
   const genres = useMemo(() => {
     return game.genres?.map((genre) => {
       const index = steamGenres["en"]?.findIndex(
@@ -78,27 +95,6 @@ export function GameItem({ game }: GameItemProps) {
       return genre;
     });
   }, [game.genres, language, steamGenres]);
-
-  const libraryImage = useMemo(() => {
-    if (game.libraryImageUrl) {
-      return (
-        <img
-          className="game-item__cover"
-          src={game.libraryImageUrl}
-          alt={game.title}
-          width={200}
-          height={103}
-          loading="lazy"
-        />
-      );
-    }
-
-    return (
-      <div className="game-item__cover-placeholder">
-        <QuestionIcon size={28} />
-      </div>
-    );
-  }, [game.libraryImageUrl, game.title]);
 
   const rawProtonValue =
     game.tier ??
@@ -119,7 +115,19 @@ export function GameItem({ game }: GameItemProps) {
     <article className="game-item">
       <Link to={buildGameDetailsPath(game)} className="game-item__content-link">
         <div className="game-item__cover-wrapper">
-          {libraryImage}
+          {coverUrl ? (
+            <img
+              className="game-item__cover"
+              src={coverUrl}
+              alt=""
+              loading="lazy"
+              onError={handleImageError}
+            />
+          ) : (
+            <div className="game-item__cover-placeholder">
+              <QuestionIcon size={24} />
+            </div>
+          )}
 
           {shouldShowProtonFeatures && protonBadge && (
             <Suspense fallback={null}>
@@ -129,7 +137,7 @@ export function GameItem({ game }: GameItemProps) {
         </div>
 
         <div className="game-item__details">
-          <span>{game.title}</span>
+          <span className="game-item__title" title={game.title}>{game.title}</span>
           {genres && genres.length > 0 ? (
             <span className="game-item__genres">{genres.join(", ")}</span>
           ) : (
@@ -139,9 +147,13 @@ export function GameItem({ game }: GameItemProps) {
           )}
 
           <div className="game-item__repackers">
-            {game.downloadSources.map((sourceName) => (
-              <Badge key={sourceName}>{sourceName}</Badge>
-            ))}
+            {game.downloadSources && game.downloadSources.length > 0 ? (
+              game.downloadSources.slice(0, 3).map((sourceName) => (
+                <Badge key={sourceName}>{sourceName}</Badge>
+              ))
+            ) : (
+              <span className="game-item__no-downloads">No downloads available</span>
+            )}
           </div>
         </div>
       </Link>

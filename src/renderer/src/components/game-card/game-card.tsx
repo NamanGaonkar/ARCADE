@@ -30,7 +30,7 @@ export function GameCard({ game, ...props }: GameCardProps) {
 
   const [stats, setStats] = useState<GameStats | null>(null);
   const [currentCover, setCurrentCover] = useState<string | null>(
-    game.libraryImageUrl || game.coverImageUrl || game.iconUrl || null
+    game.coverImageUrl || game.libraryHeroImageUrl || game.libraryImageUrl || game.iconUrl || null
   );
 
   const handleHover = useCallback(() => {
@@ -42,14 +42,14 @@ export function GameCard({ game, ...props }: GameCardProps) {
   }, [game, stats]);
 
   const handleImageError = () => {
-    if (currentCover === game.libraryImageUrl && (game.coverImageUrl || game.iconUrl)) {
-      setCurrentCover(game.coverImageUrl || game.iconUrl || null);
+    if (currentCover !== game.coverImageUrl && game.coverImageUrl) {
+      setCurrentCover(game.coverImageUrl);
     } else if (game.title) {
       window.electron
         .getSteamGridDBArtwork(game.title, game.objectId)
         .then((art) => {
-          if (art?.libraryImageUrl || art?.coverImageUrl || art?.iconUrl) {
-            setCurrentCover(art.libraryImageUrl || art.coverImageUrl || art.iconUrl);
+          if (art?.coverImageUrl || art?.libraryHeroImageUrl || art?.libraryImageUrl) {
+            setCurrentCover(art.coverImageUrl || art.libraryHeroImageUrl || art.libraryImageUrl);
           }
         })
         .catch(() => {});
@@ -69,7 +69,7 @@ export function GameCard({ game, ...props }: GameCardProps) {
         {currentCover ? (
           <img
             src={currentCover}
-            alt={game.title}
+            alt=""
             className="game-card__cover"
             loading="lazy"
             onError={handleImageError}

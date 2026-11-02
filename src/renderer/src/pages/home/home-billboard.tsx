@@ -14,6 +14,8 @@ interface HomeBillboardProps {
 export function HomeBillboard({ games, isLoading }: Readonly<HomeBillboardProps>) {
   const navigate = useNavigate();
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [fallbackHeroMap, setFallbackHeroMap] = useState<Record<string, string>>({});
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -31,10 +33,13 @@ export function HomeBillboard({ games, isLoading }: Readonly<HomeBillboardProps>
   const activeGame = trendingList[selectedIndex] || games[0];
 
   const heroImage =
+    fallbackHeroMap[activeGame.objectId] ||
     activeGame.libraryHeroImageUrl ||
     activeGame.coverImageUrl ||
     activeGame.libraryImageUrl ||
     activeGame.iconUrl;
+
+  const isHeroBroken = Boolean(heroImage && failedImages.has(heroImage));
 
   const tags = ["Most Played", "Trending", "Hot", "Popular", "Featured"];
 
@@ -42,16 +47,41 @@ export function HomeBillboard({ games, isLoading }: Readonly<HomeBillboardProps>
     navigate(buildGameDetailsPath(game));
   };
 
+  const handleHeroError = () => {
+    if (heroImage) {
+      setFailedImages((prev) => new Set(prev).add(heroImage));
+    }
+    if (activeGame && !fallbackHeroMap[activeGame.objectId]) {
+      // Attempt SteamGridDB lookup for hero/grid
+      window.electron
+        .getSteamGridDBArtwork(activeGame.title, activeGame.objectId)
+        .then((art) => {
+          if (art?.libraryHeroImageUrl || art?.coverImageUrl || art?.libraryImageUrl) {
+            const resolved =
+              art.libraryHeroImageUrl || art.coverImageUrl || art.libraryImageUrl;
+            if (resolved) {
+              setFallbackHeroMap((prev) => ({
+                ...prev,
+                [activeGame.objectId]: resolved,
+              }));
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  };
+
   return (
     <div className="home-billboard">
       {/* Left Column: Billboard Hero */}
       <div className="home-billboard__hero">
         <div className="home-billboard__media-container">
-          {heroImage ? (
+          {heroImage && !isHeroBroken ? (
             <img
               src={heroImage}
-              alt={activeGame.title}
+              alt=""
               className="home-billboard__media"
+              onError={handleHeroError}
             />
           ) : (
             <div className="home-billboard__media-placeholder" />
@@ -100,7 +130,11 @@ export function HomeBillboard({ games, isLoading }: Readonly<HomeBillboardProps>
         <div className="home-billboard__list">
           {trendingList.map((game, index) => {
             const isSelected = index === selectedIndex;
-            const thumbImage = game.iconUrl || game.coverImageUrl || game.libraryImageUrl;
+            const thumbImage =
+              fallbackHeroMap[game.objectId] ||
+              game.iconUrl ||
+              game.coverImageUrl ||
+              game.libraryImageUrl;
             const tag = tags[index] || "Popular";
 
             return (
@@ -113,7 +147,23 @@ export function HomeBillboard({ games, isLoading }: Readonly<HomeBillboardProps>
               >
                 <div className="home-billboard__item-thumb">
                   {thumbImage ? (
-                    <img src={thumbImage} alt={game.title} />
+                    <img
+                      src={thumbImage}
+                      alt=""
+                      onError={() => {
+                        window.electron
+                          .getSteamGridDBArtwork(game.title, game.objectId)
+                          .then((art) => {
+                            if (art?.iconUrl || art?.coverImageUrl) {
+                              setFallbackHeroMap((prev) => ({
+                                ...prev,
+                                [game.objectId]: art.iconUrl || art.coverImageUrl || "",
+                              }));
+                            }
+                          })
+                          .catch(() => {});
+                      }}
+                    />
                   ) : (
                     <div className="home-billboard__item-thumb-placeholder" />
                   )}

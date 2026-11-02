@@ -1,6 +1,6 @@
 {
   "name": "arcadex",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "ArcadeX - Desktop Game Library and Management",
   "main": "./out/main/index.js",
   "author": "Naman Gaonkar",

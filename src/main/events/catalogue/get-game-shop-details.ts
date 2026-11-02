@@ -34,6 +34,7 @@ import {
 } from "@main/services/store-shop-details";
 import { resolveEpicDefaultArtwork } from "@main/services/game-artwork";
 import { SteamGridDBService } from "@main/services/steamgriddb";
+import { LizardByteDBService } from "@main/services/lizardbyte-db";
 
 const applyArtworkToAssets = async (
   shop: GameShop,
@@ -255,7 +256,66 @@ const getGameShopDetails = async (
   language: string,
   options?: GameArtworkOptions
 ): Promise<ShopDetailsWithAssets | null> => {
-  if (shop === "custom") return null;
+  if (shop === "custom") {
+    let title = "";
+    const [storedGame, cachedAssets] = await Promise.all([
+      gamesSublevel.get(levelKeys.game(shop, objectId)).catch(() => null),
+      gamesShopAssetsSublevel.get(levelKeys.game(shop, objectId)).catch(() => null),
+    ]);
+    title = storedGame?.title || cachedAssets?.title || "";
+    if (!title) return null;
+
+    const lizardData = await LizardByteDBService.fetchGameByTitle(title).catch(() => null);
+    const desc = lizardData?.summary || lizardData?.storyline || "";
+    const assets: ShopAssets = {
+      objectId,
+      shop,
+      title,
+      iconUrl: cachedAssets?.iconUrl || null,
+      coverImageUrl: cachedAssets?.coverImageUrl || (lizardData?.coverUrl ?? null),
+      libraryImageUrl: cachedAssets?.libraryImageUrl || (lizardData?.coverUrl ?? null),
+      libraryHeroImageUrl: cachedAssets?.libraryHeroImageUrl || (lizardData?.heroUrl ?? null),
+      logoImageUrl: cachedAssets?.logoImageUrl || null,
+      logoPosition: cachedAssets?.logoPosition || "bottom-left",
+      downloadSources: [],
+    };
+
+    const details: any = {
+      id: Number(objectId) || (lizardData?.id ?? 0),
+      name: title,
+      short_description: desc,
+      detailed_description: desc ? `<p>${desc}</p>` : "",
+      about_the_game: desc ? `<p>${desc}</p>` : "",
+      header_image: assets.coverImageUrl || "",
+      background: assets.libraryHeroImageUrl || "",
+      background_raw: assets.libraryHeroImageUrl || "",
+      screenshots:
+        lizardData?.screenshotUrls?.map((url, i) => ({
+          id: i,
+          path_thumbnail: url,
+          path_full: url,
+        })) || [],
+      publishers: lizardData?.developers || [],
+      developers: lizardData?.developers || [],
+      genres:
+        lizardData?.genres?.map((g, i) => ({
+          id: String(i),
+          description: g,
+        })) || [],
+      release_date: { date: lizardData?.releaseDate || "", coming_soon: false },
+      assets,
+    };
+
+    return {
+      ...details,
+      assets: await applyArtworkToAssets(
+        shop,
+        objectId,
+        details.assets,
+        options?.artworkIdentity
+      ),
+    };
+  }
 
   if (shop === "launchbox") {
     const details = await getLaunchboxShopDetails(objectId, shop, language);
@@ -373,36 +433,73 @@ const getGameShopDetails = async (
         .catch(() => null);
       const title = cachedAssets?.title || storedGame?.title;
       if (title) {
-        const sgdb = await SteamGridDBService.fetchArtwork(title, objectId);
+        const [sgdb, lizardData] = await Promise.all([
+          SteamGridDBService.fetchArtwork(title, objectId).catch(() => null),
+          LizardByteDBService.fetchGameByTitle(title).catch(() => null),
+        ]);
+
         const resolvedAssets: ShopAssets = {
           objectId,
           shop: "steam",
           title,
-          iconUrl: sgdb?.iconUrl || null,
-          libraryHeroImageUrl: sgdb?.libraryHeroImageUrl || null,
-          libraryImageUrl: sgdb?.libraryImageUrl || null,
+          iconUrl: sgdb?.iconUrl || lizardData?.coverUrl || null,
+          libraryHeroImageUrl: sgdb?.libraryHeroImageUrl || lizardData?.heroUrl || null,
+          libraryImageUrl: sgdb?.libraryImageUrl || lizardData?.coverUrl || null,
           logoImageUrl: sgdb?.logoImageUrl || null,
-          coverImageUrl: sgdb?.coverImageUrl || sgdb?.libraryImageUrl || null,
+          coverImageUrl: sgdb?.coverImageUrl || lizardData?.coverUrl || null,
           logoPosition: null,
           downloadSources: [],
         };
+
+        const description =
+          lizardData?.summary ||
+          lizardData?.storyline ||
+          `${title} available on ArcadeX with complete launcher integration, high-speed repacks, and cloud save support.`;
+
         finalDetails = {
-          id: Number(objectId) || 0,
+          id: Number(objectId) || (lizardData?.id ?? 0),
           name: title,
-          short_description: `${title} available on ArcadeX.`,
-          detailed_description: `<p>${title}</p>`,
-          about_the_game: `<p>${title}</p>`,
-          header_image: sgdb?.coverImageUrl || sgdb?.libraryImageUrl || "",
-          background: sgdb?.libraryHeroImageUrl || "",
-          background_raw: sgdb?.libraryHeroImageUrl || "",
-          screenshots: [],
-          movies: [],
-          publishers: [],
-          developers: [],
-          genres: [],
-          release_date: { date: "", coming_soon: false },
+          short_description: description,
+          detailed_description: `<p>${description}</p>`,
+          about_the_game: `<p>${description}</p>`,
+          header_image: resolvedAssets.coverImageUrl || "",
+          background: resolvedAssets.libraryHeroImageUrl || "",
+          background_raw: resolvedAssets.libraryHeroImageUrl || "",
+          screenshots: lizardData?.screenshotUrls?.map((url, i) => ({
+            id: i,
+            path_thumbnail: url,
+            path_full: url,
+          })) || [],
+          movies: lizardData?.videos?.map((v, i) => ({
+            id: i,
+            name: v.title,
+            thumbnail: v.thumb || "",
+            webm: { 480: "", max: "" },
+            mp4: { 480: "", max: v.url },
+            highlight: true,
+          })) || [],
+          publishers: lizardData?.developers || [],
+          developers: lizardData?.developers || [],
+          genres: lizardData?.genres?.map((g, i) => ({ id: String(i), description: g })) || [],
+          release_date: { date: lizardData?.releaseDate || "", coming_soon: false },
           assets: resolvedAssets,
         } as any;
+      }
+    } else if (finalDetails) {
+      // If Steam details exist but description or screenshots are missing
+      if (!finalDetails.short_description || finalDetails.short_description.length < 10) {
+        const title = finalDetails.name;
+        if (title) {
+          const lizardData = await LizardByteDBService.fetchGameByTitle(title).catch(() => null);
+          if (lizardData?.summary || lizardData?.storyline) {
+            const desc = lizardData.summary || lizardData.storyline || "";
+            finalDetails.short_description = desc;
+            if (!finalDetails.detailed_description || finalDetails.detailed_description.length < 20) {
+              finalDetails.detailed_description = `<p>${desc}</p>`;
+              finalDetails.about_the_game = `<p>${desc}</p>`;
+            }
+          }
+        }
       }
     }
 

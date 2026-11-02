@@ -1,4 +1,6 @@
 !macro customInstall
+  Delete "$DESKTOP\ArcadeX.lnk"
+  Delete "$SMPROGRAMS\ArcadeX.lnk"
   ${if} ${FileExists} "$INSTDIR\resources\app-icon.ico"
     CreateShortCut "$DESKTOP\ArcadeX.lnk" "$INSTDIR\ArcadeX.exe" "" "$INSTDIR\resources\app-icon.ico" 0
     CreateShortCut "$SMPROGRAMS\ArcadeX.lnk" "$INSTDIR\ArcadeX.exe" "" "$INSTDIR\resources\app-icon.ico" 0

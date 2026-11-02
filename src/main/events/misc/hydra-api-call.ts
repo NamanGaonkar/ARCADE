@@ -1,9 +1,16 @@
 import axios from "axios";
 import { registerEvent } from "../register-event";
 import { logger } from "@main/services";
-import { findDownloadsForGame } from "@main/services/download-sources-storage";
+import {
+  findDownloadsForGame,
+  getMatchingSourceNamesForGame,
+} from "@main/services/download-sources-storage";
 import { getSteamAppDetails } from "@main/services/steam";
-import { gamesShopCacheSublevel } from "@main/level";
+import {
+  gamesShopCacheSublevel,
+  gamesShopAssetsSublevel,
+  gamesSublevel,
+} from "@main/level";
 import { levelKeys } from "@main/level/sublevels/keys";
 import type { ShopAssets, CatalogueSearchResult, GameShop } from "@types";
 
@@ -37,7 +44,7 @@ async function getSteamFeaturedCategories(): Promise<any> {
       {
         headers: {
           "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ArcadeX/1.0.0",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ArcadeX/1.0.3",
         },
         timeout: 15000,
       }
@@ -64,11 +71,13 @@ const isNonGameItem = (item: any): boolean => {
   );
 };
 
-function mapSteamItemToShopAssets(item: any): ShopAssets {
+async function mapSteamItemToShopAssets(item: any): Promise<ShopAssets> {
   const objectId = String(item.id);
   const headerUrl =
     item.header_image ||
     `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`;
+
+  const sources = await getMatchingSourceNamesForGame(item.name).catch(() => []);
 
   return {
     objectId,
@@ -80,7 +89,7 @@ function mapSteamItemToShopAssets(item: any): ShopAssets {
     logoImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/logo.png`,
     coverImageUrl: headerUrl,
     logoPosition: null,
-    downloadSources: [],
+    downloadSources: sources,
   };
 }
 
@@ -92,6 +101,50 @@ const hydraApiCall = async (
 
   if (url === "/features") {
     return [];
+  }
+
+  // Search Suggestions (/catalogue/search/suggestions)
+  if (url.startsWith("/catalogue/search/suggestions")) {
+    const query = (
+      payload.params?.query ||
+      payload.params?.title ||
+      payload.data?.query ||
+      payload.data?.title ||
+      ""
+    ).trim();
+
+    if (!query) {
+      return [];
+    }
+
+    try {
+      const searchRes = await axios.get(
+        `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(query)}&l=english&cc=US`,
+        {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ArcadeX/1.0.3",
+          },
+          timeout: 10000,
+        }
+      );
+
+      const items: any[] = (searchRes.data?.items || []).filter(
+        (item: any) => !isNonGameItem(item)
+      );
+
+      const suggestions = items.slice(0, 8).map((item) => ({
+        title: item.name,
+        objectId: String(item.id),
+        shop: "steam" as GameShop,
+        iconUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${item.id}/header.jpg`,
+      }));
+
+      return suggestions;
+    } catch (err) {
+      logger.error("[hydraApiCall] Suggestions error:", err);
+      return [];
+    }
   }
 
   // Catalogue: Hot, Weekly, Achievements
@@ -114,12 +167,45 @@ const hydraApiCall = async (
         categories.new_releases?.items || categories.coming_soon?.items || [];
     }
 
-    return rawItems.filter((item) => !isNonGameItem(item)).map(mapSteamItemToShopAssets);
+    const filtered = rawItems.filter((item) => !isNonGameItem(item));
+    return Promise.all(filtered.map(mapSteamItemToShopAssets));
+  }
+
+  // Similar Games (/catalogue/:shop/:objectId/similar)
+  const similarMatch = url.match(/^\/catalogue\/([^/]+)\/([^/]+)\/similar/);
+  if (similarMatch) {
+    const objectId = similarMatch[2];
+    const take = payload.params?.take || 9;
+
+    const categories = await getSteamFeaturedCategories();
+    const allCandidates = [
+      ...(categories.top_sellers?.items || []),
+      ...(categories.featured_win?.items || []),
+      ...(categories.specials?.items || []),
+    ].filter((item) => String(item?.id) !== objectId && !isNonGameItem(item));
+
+    // Deduplicate
+    const seen = new Set<string>();
+    const unique = allCandidates.filter((item) => {
+      const id = String(item.id);
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+
+    const sliced = unique.slice(0, take);
+    return Promise.all(sliced.map(mapSteamItemToShopAssets));
   }
 
   // Catalogue search
   if (url.startsWith("/catalogue/search")) {
-    const title = payload.data?.title?.trim();
+    const title = (
+      payload.params?.title ||
+      payload.params?.query ||
+      payload.data?.title ||
+      payload.data?.query ||
+      ""
+    ).trim();
 
     if (title) {
       try {
@@ -128,7 +214,7 @@ const hydraApiCall = async (
           {
             headers: {
               "User-Agent":
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ArcadeX/1.0.0",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ArcadeX/1.0.3",
             },
             timeout: 15000,
           }
@@ -137,16 +223,22 @@ const hydraApiCall = async (
         const items: any[] = (searchRes.data?.items || []).filter(
           (item: any) => !isNonGameItem(item)
         );
-        const edges: CatalogueSearchResult[] = items.map((item) => ({
-          id: String(item.id),
-          objectId: String(item.id),
-          title: item.name,
-          shop: "steam",
-          genres: [],
-          releaseYear: null,
-          libraryImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${item.id}/library_600x900.jpg`,
-          downloadSources: [],
-        }));
+
+        const edges: CatalogueSearchResult[] = await Promise.all(
+          items.map(async (item) => {
+            const sources = await getMatchingSourceNamesForGame(item.name).catch(() => []);
+            return {
+              id: String(item.id),
+              objectId: String(item.id),
+              title: item.name,
+              shop: "steam",
+              genres: [],
+              releaseYear: null,
+              libraryImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${item.id}/library_600x900.jpg`,
+              downloadSources: sources,
+            };
+          })
+        );
 
         return {
           edges,
@@ -182,16 +274,21 @@ const hydraApiCall = async (
       }
     }
 
-    const edges: CatalogueSearchResult[] = allItems.map((item) => ({
-      id: String(item.id),
-      objectId: String(item.id),
-      title: item.name,
-      shop: "steam",
-      genres: [],
-      releaseYear: null,
-      libraryImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${item.id}/library_600x900.jpg`,
-      downloadSources: [],
-    }));
+    const edges: CatalogueSearchResult[] = await Promise.all(
+      allItems.map(async (item) => {
+        const sources = await getMatchingSourceNamesForGame(item.name).catch(() => []);
+        return {
+          id: String(item.id),
+          objectId: String(item.id),
+          title: item.name,
+          shop: "steam",
+          genres: [],
+          releaseYear: null,
+          libraryImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${item.id}/library_600x900.jpg`,
+          downloadSources: sources,
+        };
+      })
+    );
 
     return {
       edges,
@@ -216,7 +313,27 @@ const hydraApiCall = async (
 
       if (cached?.name) {
         gameTitle = cached.name;
-      } else {
+      }
+
+      if (!gameTitle) {
+        const stored = await gamesSublevel
+          .get(levelKeys.game(shop, objectId))
+          .catch(() => null);
+        if (stored?.title) {
+          gameTitle = stored.title;
+        }
+      }
+
+      if (!gameTitle) {
+        const cachedAssets = await gamesShopAssetsSublevel
+          .get(levelKeys.game(shop, objectId))
+          .catch(() => null);
+        if (cachedAssets?.title) {
+          gameTitle = cachedAssets.title;
+        }
+      }
+
+      if (!gameTitle && shop === "steam") {
         const details = await getSteamAppDetails(objectId, "en").catch(
           () => null
         );
@@ -234,6 +351,23 @@ const hydraApiCall = async (
     }
 
     return [];
+  }
+
+  // ProtonDB compatibility lookup
+  const protondbMatch = url.match(/^\/games\/steam\/([^/]+)\/protondb/);
+  if (protondbMatch) {
+    const objectId = protondbMatch[1];
+    try {
+      const resp = await axios.get(
+        `https://www.protondb.com/api/v1/reports/summaries/${objectId}.json`,
+        { timeout: 8000 }
+      );
+      if (resp.data) {
+        return resp.data;
+      }
+    } catch {
+      return { tier: "pending", confidence: "low", score: 0, total: 0 };
+    }
   }
 
   if (url.startsWith("/download-sources")) {
