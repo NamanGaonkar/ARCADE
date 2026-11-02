@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { Game, ShopDetailsWithAssets } from "@types";
 
 interface GameLogoProps {
@@ -32,10 +33,39 @@ export function GameLogo({ game, shopDetails }: Readonly<GameLogoProps>) {
       );
 
   const title = game?.title || shopDetails?.name || "";
+  const [currentLogo, setCurrentLogo] = useState<string | null>(logoImage || null);
+  const [hasFailed, setHasFailed] = useState(false);
 
-  if (logoImage) {
+  useEffect(() => {
+    setCurrentLogo(logoImage || null);
+    setHasFailed(false);
+  }, [logoImage]);
+
+  const handleLogoError = () => {
+    if (title && !hasFailed) {
+      window.electron
+        .getSteamGridDBArtwork(title, shopDetails?.steam_appid || game?.objectId)
+        .then((art) => {
+          if (art?.logoImageUrl) {
+            setCurrentLogo(art.logoImageUrl);
+          } else {
+            setHasFailed(true);
+          }
+        })
+        .catch(() => setHasFailed(true));
+    } else {
+      setHasFailed(true);
+    }
+  };
+
+  if (currentLogo && !hasFailed) {
     return (
-      <img src={logoImage} className="game-details__game-logo" alt={title} />
+      <img
+        src={currentLogo}
+        className="game-details__game-logo"
+        alt={title}
+        onError={handleLogoError}
+      />
     );
   }
 

@@ -54,11 +54,20 @@ export function normalizeShopAssets(value: unknown): ShopAssets | null {
 export function normalizeShopAssetsList(value: unknown): ShopAssets[] {
   if (!Array.isArray(value)) return [];
 
-  return value.flatMap((game) => {
-    const normalizedGame = normalizeShopAssets(game);
+  const seen = new Set<string>();
+  const list: ShopAssets[] = [];
 
-    return normalizedGame ? [normalizedGame] : [];
-  });
+  for (const item of value) {
+    const normalizedGame = normalizeShopAssets(item);
+    if (!normalizedGame) continue;
+    const key = `${normalizedGame.shop}:${normalizedGame.objectId}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      list.push(normalizedGame);
+    }
+  }
+
+  return list;
 }
 
 export function normalizeTrendingGame(value: unknown): TrendingGame | null {

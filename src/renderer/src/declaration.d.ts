@@ -370,6 +370,16 @@ declare global {
       options?: GameArtworkOptions
     ) => Promise<ShopDetailsWithAssets | null>;
     getRandomGame: () => Promise<Steam250Game>;
+    getSteamGridDBArtwork: (
+      title: string,
+      steamAppId?: string | number
+    ) => Promise<{
+      libraryImageUrl: string | null;
+      libraryHeroImageUrl: string | null;
+      logoImageUrl: string | null;
+      iconUrl: string | null;
+      coverImageUrl: string | null;
+    } | null>;
     getGameStats: (objectId: string, shop: GameShop) => Promise<GameStats>;
     getCatalogueNames: (list: "developers" | "publishers") => Promise<string[]>;
     getGameAssets: (

@@ -22,6 +22,7 @@ import {
   resolveAchievementCount,
   resolveUnlockedAchievementCount,
 } from "@main/services/achievements/achievement-memory-store";
+import { SteamGridDBService, type SteamGridDBAssets } from "@main/services/steamgriddb";
 
 export const lookupCachedPlatform = async (
   gameKey: string
@@ -164,6 +165,52 @@ const getLibrary = async (
         }
       }
 
+      const isRepackOrCustom =
+        !game.objectId ||
+        Number(game.objectId) > 3000000 ||
+        isNaN(Number(game.objectId));
+
+      let sgdbAssets: SteamGridDBAssets | null = null;
+      if ((isRepackOrCustom || !composedAssets?.libraryImageUrl) && game.title) {
+        sgdbAssets = await SteamGridDBService.fetchArtwork(game.title, game.objectId);
+      }
+
+      const resolvedLibraryImageUrl = isRepackOrCustom && sgdbAssets?.libraryImageUrl
+        ? sgdbAssets.libraryImageUrl
+        : (composedAssets?.libraryImageUrl ||
+           sgdbAssets?.libraryImageUrl ||
+           (game as any).libraryImageUrl ||
+           (game.shop === "steam" && !isRepackOrCustom
+             ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.objectId}/library_600x900.jpg`
+             : null));
+
+      const resolvedLibraryHeroImageUrl = isRepackOrCustom && sgdbAssets?.libraryHeroImageUrl
+        ? sgdbAssets.libraryHeroImageUrl
+        : (composedAssets?.libraryHeroImageUrl ||
+           sgdbAssets?.libraryHeroImageUrl ||
+           game.libraryHeroImageUrl ||
+           (game.shop === "steam" && !isRepackOrCustom
+             ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.objectId}/library_hero.jpg`
+             : null));
+
+      const resolvedLogoImageUrl = isRepackOrCustom && sgdbAssets?.logoImageUrl
+        ? sgdbAssets.logoImageUrl
+        : (composedAssets?.logoImageUrl ||
+           sgdbAssets?.logoImageUrl ||
+           game.logoImageUrl ||
+           (game.shop === "steam" && !isRepackOrCustom
+             ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.objectId}/logo.png`
+             : null));
+
+      const resolvedIconUrl = isRepackOrCustom && sgdbAssets?.iconUrl
+        ? sgdbAssets.iconUrl
+        : (composedAssets?.iconUrl ||
+           sgdbAssets?.iconUrl ||
+           game.iconUrl ||
+           (game.shop === "steam" && !isRepackOrCustom
+             ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.objectId}/header.jpg`
+             : null));
+
       return {
         id: key,
         ...game,
@@ -174,30 +221,10 @@ const getLibrary = async (
         ...composedAssets,
         shop: game.shop,
         objectId: game.objectId,
-        libraryImageUrl:
-          composedAssets?.libraryImageUrl ||
-          (game as any).libraryImageUrl ||
-          (game.shop === "steam"
-            ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.objectId}/library_600x900.jpg`
-            : null),
-        libraryHeroImageUrl:
-          composedAssets?.libraryHeroImageUrl ||
-          game.libraryHeroImageUrl ||
-          (game.shop === "steam"
-            ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.objectId}/library_hero.jpg`
-            : null),
-        logoImageUrl:
-          composedAssets?.logoImageUrl ||
-          game.logoImageUrl ||
-          (game.shop === "steam"
-            ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.objectId}/logo.png`
-            : null),
-        iconUrl:
-          composedAssets?.iconUrl ||
-          game.iconUrl ||
-          (game.shop === "steam"
-            ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.objectId}/header.jpg`
-            : null),
+        libraryImageUrl: resolvedLibraryImageUrl,
+        libraryHeroImageUrl: resolvedLibraryHeroImageUrl,
+        logoImageUrl: resolvedLogoImageUrl,
+        iconUrl: resolvedIconUrl,
         unlockedAchievementCount,
         achievementCount,
         ...(game.shop === "epic" &&

@@ -8,6 +8,7 @@ import {
 } from "@main/level";
 import { composeAssetsWithArtwork } from "@shared";
 import { resolveEpicDefaultArtwork } from "@main/services/game-artwork";
+import { SteamGridDBService } from "@main/services/steamgriddb";
 
 const LOCAL_CACHE_EXPIRATION = 1000 * 60 * 60 * 8; // 8 hours
 
@@ -63,15 +64,27 @@ export const getGameAssets = async (
   }
 
   if (shop === "steam") {
+    const sgdb = await SteamGridDBService.fetchArtwork(cachedAssets?.title || "", objectId);
+
     const steamAssets: ShopAssets = {
       objectId,
       shop: "steam",
       title: cachedAssets?.title || "",
-      iconUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`,
-      libraryHeroImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_hero.jpg`,
-      libraryImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_600x900.jpg`,
-      logoImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/logo.png`,
-      coverImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`,
+      iconUrl:
+        sgdb?.iconUrl ||
+        `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`,
+      libraryHeroImageUrl:
+        sgdb?.libraryHeroImageUrl ||
+        `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_hero.jpg`,
+      libraryImageUrl:
+        sgdb?.libraryImageUrl ||
+        `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_600x900.jpg`,
+      logoImageUrl:
+        sgdb?.logoImageUrl ||
+        `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/logo.png`,
+      coverImageUrl:
+        sgdb?.coverImageUrl ||
+        `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`,
       logoPosition: null,
       downloadSources: [],
     };

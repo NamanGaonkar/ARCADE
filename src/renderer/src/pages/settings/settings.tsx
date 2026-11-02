@@ -8,7 +8,6 @@ import { Fragment, useMemo } from "react";
 import "./settings.scss";
 import {
   BellIcon,
-  CloudIcon,
   DownloadIcon,
   GearIcon,
   LinkIcon,
@@ -22,7 +21,6 @@ import { SettingsContextDownloadSources } from "./settings-context-download-sour
 import { SettingsContextNotifications } from "./settings-context-notifications";
 import { SettingsContextContentGameplay } from "./settings-context-content-gameplay";
 import { SettingsContextScreenshots } from "./settings-context-screenshots";
-import { SettingsContextIntegrations } from "./settings-context-integrations";
 import { SettingsContextBigPicture } from "./settings-context-big-picture";
 import { SettingsContextEmulation } from "./emulation/settings-context-emulation";
 
@@ -68,11 +66,6 @@ export default function Settings() {
             },
           ]
         : []),
-      {
-        id: "integrations" as const,
-        label: t("integrations"),
-        icon: <CloudIcon size={16} />,
-      },
       {
         id: "big_picture" as const,
         label: t("big_picture"),
@@ -120,10 +113,6 @@ export default function Settings() {
 
             if (selectedCategoryId === "screenshots") {
               return <SettingsContextScreenshots />;
-            }
-
-            if (selectedCategoryId === "integrations") {
-              return <SettingsContextIntegrations />;
             }
 
             if (selectedCategoryId === "big_picture") {

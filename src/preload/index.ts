@@ -521,6 +521,8 @@ contextBridge.exposeInMainWorld("electron", {
   ) =>
     ipcRenderer.invoke("getGameShopDetails", objectId, shop, language, options),
   getRandomGame: () => ipcRenderer.invoke("getRandomGame"),
+  getSteamGridDBArtwork: (title: string, steamAppId?: string | number) =>
+    ipcRenderer.invoke("getSteamGridDBArtwork", title, steamAppId),
   getGameStats: (objectId: string, shop: GameShop) =>
     ipcRenderer.invoke("getGameStats", objectId, shop),
   getCatalogueNames: (list: "developers" | "publishers") =>

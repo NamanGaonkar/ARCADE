@@ -39,7 +39,7 @@ asarUnpack:
   - node_modules/@img/sharp-libvips-*/**
 win:
   executableName: ArcadeX
-  signAndEditExecutable: false
+  icon: build/icon.ico
   extraResources:
     - from: legendary/win32/${arch}
       to: legendary

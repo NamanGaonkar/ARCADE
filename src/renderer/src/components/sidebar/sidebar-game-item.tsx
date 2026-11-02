@@ -69,8 +69,13 @@ export const SidebarGameItem = memo(function SidebarGameItem({
   const sidebarIcon = isCustomGame
     ? game.libraryImageUrl || game.iconUrl
     : game.customIconUrl || game.iconUrl;
+  const [dynamicIcon, setDynamicIcon] = useState<string | null>(null);
+  const activeIcon = dynamicIcon || sidebarIcon;
   const [failedIcon, setFailedIcon] = useState<string | null>(null);
-  useEffect(() => setFailedIcon(null), [sidebarIcon]);
+  useEffect(() => {
+    setFailedIcon(null);
+    setDynamicIcon(null);
+  }, [sidebarIcon]);
   useEffect(() => {
     if (!failedIcon) return;
     const retry = window.setTimeout(
@@ -131,13 +136,28 @@ export const SidebarGameItem = memo(function SidebarGameItem({
           onContextMenu={handleContextMenu}
         >
           <span className="sidebar__game-icon-container">
-            {sidebarIcon && sidebarIcon !== failedIcon ? (
+            {activeIcon && activeIcon !== failedIcon ? (
               <img
                 className="sidebar__game-icon"
-                src={sidebarIcon}
+                src={activeIcon}
                 alt={game.title}
                 loading="lazy"
-                onError={() => setFailedIcon(sidebarIcon)}
+                onError={() => {
+                  if (!dynamicIcon && game.title) {
+                    window.electron
+                      .getSteamGridDBArtwork(game.title, game.objectId)
+                      .then((art) => {
+                        if (art?.iconUrl || art?.libraryImageUrl) {
+                          setDynamicIcon(art.iconUrl || art.libraryImageUrl);
+                        } else {
+                          setFailedIcon(activeIcon);
+                        }
+                      })
+                      .catch(() => setFailedIcon(activeIcon));
+                  } else {
+                    setFailedIcon(activeIcon);
+                  }
+                }}
               />
             ) : (
               getFallbackIcon()

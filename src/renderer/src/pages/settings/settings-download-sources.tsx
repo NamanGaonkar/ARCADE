@@ -1,7 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 
 import {
-  TextField,
   Button,
   Badge,
   ConfirmationModal,
@@ -255,6 +254,10 @@ export function SettingsDownloadSources() {
           const isPendingOrMatching =
             downloadSource.status === DownloadSourceStatus.PendingMatching ||
             downloadSource.status === DownloadSourceStatus.Matching;
+          const isClassic =
+            downloadSource.name.toLowerCase().includes("retro") ||
+            downloadSource.name.toLowerCase().includes("classic") ||
+            downloadSource.name.toLowerCase().includes("psx");
 
           return (
             <li
@@ -262,15 +265,19 @@ export function SettingsDownloadSources() {
               className={`settings-download-sources__item ${isSyncingDownloadSources ? "settings-download-sources__item--syncing" : ""} ${isPendingOrMatching ? "settings-download-sources__item--pending" : ""}`}
             >
               <div className="settings-download-sources__item-header">
-                <h2>{downloadSource.name}</h2>
-
-                <div style={{ display: "flex" }}>
-                  <Badge>
-                    {isPendingOrMatching && (
-                      <SyncIcon className="settings-download-sources__spinner" />
-                    )}
-                    {statusTitle[downloadSource.status]}
-                  </Badge>
+                <div className="settings-download-sources__title-row">
+                  <h2>{downloadSource.name}</h2>
+                  <div className="settings-download-sources__badges">
+                    <Badge>
+                      {isClassic ? "Classic" : "Modern"}
+                    </Badge>
+                    <Badge>
+                      {isPendingOrMatching && (
+                        <SyncIcon className="settings-download-sources__spinner" />
+                      )}
+                      {statusTitle[downloadSource.status] || "Up to Date"}
+                    </Badge>
+                  </div>
                 </div>
 
                 <button
@@ -294,24 +301,23 @@ export function SettingsDownloadSources() {
                 </button>
               </div>
 
-              <TextField
-                label={t("download_source_url")}
-                value={downloadSource.url}
-                readOnly
-                theme="dark"
-                disabled
-                rightContent={
-                  <Button
-                    type="button"
-                    theme="outline"
-                    onClick={() => handleRemoveSource(downloadSource)}
-                    disabled={isRemovingDownloadSource}
-                  >
-                    <NoEntryIcon />
-                    {t("remove_download_source")}
-                  </Button>
-                }
-              />
+              <div className="settings-download-sources__url-row">
+                <span
+                  className="settings-download-sources__url-text"
+                  title={downloadSource.url}
+                >
+                  {downloadSource.url}
+                </span>
+                <Button
+                  type="button"
+                  theme="outline"
+                  onClick={() => handleRemoveSource(downloadSource)}
+                  disabled={isRemovingDownloadSource}
+                >
+                  <NoEntryIcon />
+                  {t("remove_download_source")}
+                </Button>
+              </div>
             </li>
           );
         })}

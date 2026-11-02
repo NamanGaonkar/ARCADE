@@ -20,6 +20,7 @@ import {
   gamesArtworkSelectionSublevel,
   gamesShopAssetsSublevel,
   gamesShopCacheSublevel,
+  gamesSublevel,
   levelKeys,
 } from "@main/level";
 import { composeAssetsWithArtwork } from "@shared";
@@ -32,6 +33,7 @@ import {
   sanitizeEpicHtml,
 } from "@main/services/store-shop-details";
 import { resolveEpicDefaultArtwork } from "@main/services/game-artwork";
+import { SteamGridDBService } from "@main/services/steamgriddb";
 
 const applyArtworkToAssets = async (
   shop: GameShop,
@@ -280,7 +282,7 @@ const getGameShopDetails = async (
       gamesShopAssetsSublevel.get(levelKeys.game(shop, objectId)),
     ]);
 
-    const appDetails = getSteamAppDetails(objectId, language).then((result) => {
+    const appDetails = getSteamAppDetails(objectId, language).then(async (result) => {
       if (result) {
         result.name = cachedAssets?.title ?? result.name;
 
@@ -293,18 +295,34 @@ const getGameShopDetails = async (
             logger.error("Could not cache game details", err);
           });
 
-        const resolvedAssets: ShopAssets = cachedAssets ?? {
+        const sgdb = await SteamGridDBService.fetchArtwork(result.name, objectId);
+
+        const resolvedAssets: ShopAssets = {
           objectId,
           shop: "steam",
           title: result.name,
-          iconUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`,
+          iconUrl:
+            sgdb?.iconUrl ||
+            cachedAssets?.iconUrl ||
+            `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`,
           libraryHeroImageUrl:
+            sgdb?.libraryHeroImageUrl ||
             (result as any).background_raw ||
             (result as any).background ||
+            cachedAssets?.libraryHeroImageUrl ||
             `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_hero.jpg`,
-          libraryImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_600x900.jpg`,
-          logoImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/logo.png`,
-          coverImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`,
+          libraryImageUrl:
+            sgdb?.libraryImageUrl ||
+            cachedAssets?.libraryImageUrl ||
+            `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_600x900.jpg`,
+          logoImageUrl:
+            sgdb?.logoImageUrl ||
+            cachedAssets?.logoImageUrl ||
+            `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/logo.png`,
+          coverImageUrl:
+            sgdb?.coverImageUrl ||
+            cachedAssets?.coverImageUrl ||
+            `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`,
           logoPosition: null,
           downloadSources: [],
         };
@@ -348,14 +366,54 @@ const getGameShopDetails = async (
         }
       : await appDetails;
 
-    if (!details) return details;
+    let finalDetails = details;
+    if (!finalDetails) {
+      const storedGame = await gamesSublevel
+        .get(levelKeys.game(shop, objectId))
+        .catch(() => null);
+      const title = cachedAssets?.title || storedGame?.title;
+      if (title) {
+        const sgdb = await SteamGridDBService.fetchArtwork(title, objectId);
+        const resolvedAssets: ShopAssets = {
+          objectId,
+          shop: "steam",
+          title,
+          iconUrl: sgdb?.iconUrl || null,
+          libraryHeroImageUrl: sgdb?.libraryHeroImageUrl || null,
+          libraryImageUrl: sgdb?.libraryImageUrl || null,
+          logoImageUrl: sgdb?.logoImageUrl || null,
+          coverImageUrl: sgdb?.coverImageUrl || sgdb?.libraryImageUrl || null,
+          logoPosition: null,
+          downloadSources: [],
+        };
+        finalDetails = {
+          id: Number(objectId) || 0,
+          name: title,
+          short_description: `${title} available on ArcadeX.`,
+          detailed_description: `<p>${title}</p>`,
+          about_the_game: `<p>${title}</p>`,
+          header_image: sgdb?.coverImageUrl || sgdb?.libraryImageUrl || "",
+          background: sgdb?.libraryHeroImageUrl || "",
+          background_raw: sgdb?.libraryHeroImageUrl || "",
+          screenshots: [],
+          movies: [],
+          publishers: [],
+          developers: [],
+          genres: [],
+          release_date: { date: "", coming_soon: false },
+          assets: resolvedAssets,
+        } as any;
+      }
+    }
+
+    if (!finalDetails) return null;
 
     return {
-      ...details,
+      ...finalDetails,
       assets: await applyArtworkToAssets(
         shop,
         objectId,
-        details.assets,
+        finalDetails.assets,
         options?.artworkIdentity
       ),
     };

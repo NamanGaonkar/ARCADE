@@ -339,8 +339,28 @@ export default function Home() {
 
   const { featuredGame } = useFeaturedGame();
   const hardPlatinums = useHardPlatinums();
-  const hotGames = useHotGames();
-  const weeklyGames = useWeeklyGames();
+  const rawHotGames = useHotGames();
+  const rawWeeklyGames = useWeeklyGames();
+
+  const hotGames = useMemo(() => {
+    const seen = new Set<string>();
+    return rawHotGames.filter((g) => {
+      const key = `${g.shop}:${g.objectId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [rawHotGames]);
+
+  const weeklyGames = useMemo(() => {
+    const seen = new Set<string>();
+    return rawWeeklyGames.filter((g) => {
+      const key = `${g.shop}:${g.objectId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [rawWeeklyGames]);
 
   useEffect(() => {
     void updateLibrary();
@@ -506,7 +526,7 @@ export default function Home() {
           upNavigationTarget={heroUpNavigationTarget}
         />
         <FocusCarousel
-          title="Popular on Hydra"
+          title="Popular Games"
           cardVariant="vertical"
           games={weeklyGames}
           regionId={HOME_WEEKLY_GAMES_CAROUSEL_REGION_ID}

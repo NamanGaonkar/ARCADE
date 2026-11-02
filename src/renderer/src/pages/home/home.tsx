@@ -3,25 +3,19 @@ import { useTranslation } from "react-i18next";
 import { levelDBService } from "@renderer/services/leveldb.service";
 import { orderBy } from "lodash-es";
 import { useNavigate } from "react-router-dom";
-
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
-
-import { Button, GameCard, Hero } from "@renderer/components";
+import { Button, GameCard } from "@renderer/components";
 import type { DownloadSource, ShopAssets, Steam250Game } from "@types";
-
-import flameIconStatic from "@renderer/assets/icons/flame-static.png";
-import flameIconAnimated from "@renderer/assets/icons/flame-animated.gif";
-import starsIconAnimated from "@renderer/assets/icons/stars-animated.gif";
-
+import { SparkleIcon } from "@primer/octicons-react";
 import { buildGameDetailsPath, ensureArray } from "@renderer/helpers";
 import { CatalogueCategory } from "@shared";
+import { HomeBillboard } from "./home-billboard";
 import "./home.scss";
 
 export default function Home() {
   const { t } = useTranslation("home");
   const navigate = useNavigate();
 
-  const [animateFlame, setAnimateFlame] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [randomGame, setRandomGame] = useState<Steam250Game | null>(null);
 
@@ -105,28 +99,18 @@ export default function Home() {
   useEffect(() => {
     setIsLoading(true);
     getCatalogue(CatalogueCategory.Hot);
-
     getRandomGame();
   }, [getCatalogue, getRandomGame]);
 
   const categories = Object.values(CatalogueCategory);
 
-  const handleMouseEnterCategory = (category: CatalogueCategory) => {
-    if (category === CatalogueCategory.Hot) {
-      setAnimateFlame(true);
-    }
-  };
-
-  const handleMouseLeaveCategory = (category: CatalogueCategory) => {
-    if (category === CatalogueCategory.Hot) {
-      setAnimateFlame(false);
-    }
-  };
-
   return (
     <SkeletonTheme baseColor="#1c1c1c" highlightColor="#444">
       <section className="home__content">
-        <Hero />
+        <HomeBillboard
+          games={catalogue[CatalogueCategory.Hot]}
+          isLoading={isLoading && !catalogue[CatalogueCategory.Hot].length}
+        />
 
         <section className="home__header">
           <ul className="home__buttons-list">
@@ -139,26 +123,7 @@ export default function Home() {
                       : "outline"
                   }
                   onClick={() => handleCategoryClick(category)}
-                  onMouseEnter={() => handleMouseEnterCategory(category)}
-                  onMouseLeave={() => handleMouseLeaveCategory(category)}
                 >
-                  {category === CatalogueCategory.Hot && (
-                    <div className="home__icon-wrapper">
-                      <img
-                        src={flameIconStatic}
-                        alt=""
-                        className="home__flame-icon"
-                        style={{ display: animateFlame ? "none" : "block" }}
-                      />
-                      <img
-                        src={flameIconAnimated}
-                        alt=""
-                        className="home__flame-icon"
-                        style={{ display: animateFlame ? "block" : "none" }}
-                      />
-                    </div>
-                  )}
-
                   {t(category)}
                 </Button>
               </li>
@@ -170,28 +135,14 @@ export default function Home() {
             theme="outline"
             disabled={!randomGame}
           >
-            <div className="home__icon-wrapper">
-              <img
-                src={starsIconAnimated}
-                alt=""
-                className="home__stars-icon"
-              />
-            </div>
+            <span style={{ display: "inline-flex", marginRight: 6 }}>
+              <SparkleIcon size={14} />
+            </span>
             {t("surprise_me")}
           </Button>
         </section>
 
         <h2 className="home__title">
-          {currentCatalogueCategory === CatalogueCategory.Hot && (
-            <div className="home__title-icon">
-              <img
-                src={flameIconAnimated}
-                alt=""
-                className="home__title-flame-icon"
-              />
-            </div>
-          )}
-
           {t(currentCatalogueCategory)}
         </h2>
 

@@ -78,9 +78,12 @@ export const LibraryGameCard = memo(function LibraryGameCard({
 
   const hasPickedCover = Boolean(game.selectedArtworkTypes?.includes("grid"));
 
+  const [dynamicCover, setDynamicCover] = useState<string | null>(null);
+
   const candidates = [
     { url: game.customCoverImageUrl, isChosenCover: true }, // Level 0
     { url: game.coverImageUrl, isChosenCover: hasPickedCover }, // Level 1
+    { url: dynamicCover, isChosenCover: false },
     { url: game.libraryImageUrl, isChosenCover: false }, // Level 2
     { url: game.iconUrl, isChosenCover: false }, // Level 3
   ].filter(({ url }) => url && url.trim() !== "");
@@ -168,6 +171,19 @@ export const LibraryGameCard = memo(function LibraryGameCard({
 
     if (fallbackIndex < sources.length - 1) {
       setFallbackIndex((prevIndex) => prevIndex + 1);
+    } else if (game.title && !dynamicCover) {
+      window.electron
+        .getSteamGridDBArtwork(game.title, game.objectId)
+        .then((art) => {
+          if (art?.libraryImageUrl) {
+            setDynamicCover(art.libraryImageUrl);
+            setFallbackIndex(0);
+            setImageError(false);
+          } else {
+            setImageError(true);
+          }
+        })
+        .catch(() => setImageError(true));
     } else {
       setImageError(true);
     }
@@ -182,6 +198,7 @@ export const LibraryGameCard = memo(function LibraryGameCard({
     game.coverImageUrl,
     game.libraryImageUrl,
     game.iconUrl,
+    dynamicCover,
   ]);
 
   const renderCoverMedia = () => {

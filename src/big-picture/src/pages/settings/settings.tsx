@@ -25,7 +25,6 @@ import {
   isRpcs3EmulationDeepLink,
 } from "./emulation/navigation";
 import { GeneralSettingsSection } from "./general";
-import { IntegrationsSettingsSection } from "./integrations";
 import { SETTINGS_PAGE_REGION_ID } from "./navigation";
 import { NotificationsSettingsSection } from "./notifications";
 import { ScreenshotsSettingsSection } from "./screenshots";
@@ -38,7 +37,6 @@ import {
   DOWNLOADS_SOURCES_SECTION_REGION_ID,
   DOWNLOAD_DIRECTORIES_DEFAULT_SELECT_ID,
   EMULATION_OVERVIEW_CARD_FOCUS_IDS,
-  getIntegrationProviderCheckboxFocusId,
   NOTIFICATIONS_LIBRARY_ITEM_FOCUS_IDS,
 } from "./settings-navigation";
 
@@ -52,7 +50,6 @@ const ALL_SETTINGS_TABS = [
   { id: "screenshots", label: "Screenshots" },
   { id: "big-picture", label: "Big Picture" },
   { id: "emulation", label: "Emulation" },
-  { id: "integrations", label: "Integrations" },
 ] as const;
 
 const SETTINGS_PAGE_FADE_TRANSITION = {
@@ -98,7 +95,6 @@ const SETTINGS_TAB_CONTENT: Record<
   screenshots: ScreenshotsSettingsSection,
   "big-picture": BigPictureSettingsSection,
   emulation: EmulationSettingsSection,
-  integrations: IntegrationsSettingsSection,
 };
 
 function SettingsTabPanel({
@@ -319,11 +315,6 @@ export default function Settings() {
               type: "item",
               itemId: EMULATION_OVERVIEW_CARD_FOCUS_IDS.ps1,
             };
-      case "integrations":
-        return {
-          type: "item",
-          itemId: getIntegrationProviderCheckboxFocusId("real-debrid"),
-        };
       default:
         return null;
     }

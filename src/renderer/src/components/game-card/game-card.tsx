@@ -29,6 +29,9 @@ export function GameCard({ game, ...props }: GameCardProps) {
   const { t } = useTranslation("game_card");
 
   const [stats, setStats] = useState<GameStats | null>(null);
+  const [currentCover, setCurrentCover] = useState<string | null>(
+    game.libraryImageUrl || game.coverImageUrl || game.iconUrl || null
+  );
 
   const handleHover = useCallback(() => {
     if (!stats) {
@@ -37,6 +40,21 @@ export function GameCard({ game, ...props }: GameCardProps) {
       });
     }
   }, [game, stats]);
+
+  const handleImageError = () => {
+    if (currentCover === game.libraryImageUrl && (game.coverImageUrl || game.iconUrl)) {
+      setCurrentCover(game.coverImageUrl || game.iconUrl || null);
+    } else if (game.title) {
+      window.electron
+        .getSteamGridDBArtwork(game.title, game.objectId)
+        .then((art) => {
+          if (art?.libraryImageUrl || art?.coverImageUrl || art?.iconUrl) {
+            setCurrentCover(art.libraryImageUrl || art.coverImageUrl || art.iconUrl);
+          }
+        })
+        .catch(() => {});
+    }
+  };
 
   const { numberFormatter } = useFormat();
 
@@ -48,12 +66,17 @@ export function GameCard({ game, ...props }: GameCardProps) {
       onMouseEnter={handleHover}
     >
       <div className="game-card__backdrop">
-        <img
-          src={game.libraryImageUrl ?? undefined}
-          alt={game.title}
-          className="game-card__cover"
-          loading="lazy"
-        />
+        {currentCover ? (
+          <img
+            src={currentCover}
+            alt={game.title}
+            className="game-card__cover"
+            loading="lazy"
+            onError={handleImageError}
+          />
+        ) : (
+          <div className="game-card__cover game-card__cover--fallback" />
+        )}
 
         <div className="game-card__content">
           <div className="game-card__title-container">

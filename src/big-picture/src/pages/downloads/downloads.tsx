@@ -2325,17 +2325,6 @@ export default function Downloads() {
 
     if (menuState.section === "paused") {
       return [
-        ...(item.game.download?.downloader === Downloader.Epic &&
-        item.game.download.status === "error"
-          ? [
-              {
-                id: "epic-integrations",
-                label: t("integrations", { ns: "settings" }),
-                disabled: interactionsLocked,
-                onSelect: () => navigate("/settings?tab=integrations"),
-              },
-            ]
-          : []),
         {
           id: "cancel",
           label: "Cancel",

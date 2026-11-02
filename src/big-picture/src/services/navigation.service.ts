@@ -293,7 +293,7 @@ export class NavigationService {
     const existingRegion = this.regions.get(region.id);
 
     if (existingRegion) {
-      throw new Error(`Focus region "${region.id}" is already registered.`);
+      this.unregisterRegion(region.id);
     }
 
     const layerId = region.layerId ?? ROOT_NAVIGATION_LAYER_ID;
@@ -340,47 +340,49 @@ export class NavigationService {
 
     this.notify();
 
-    return () => {
-      const registeredRegion = this.regions.get(region.id);
+    return () => this.unregisterRegion(region.id);
+  }
 
-      if (!registeredRegion) return;
-      const shouldRecoverFocus =
-        this.currentFocusId !== null &&
-        this.isNodeWithinRegion(this.currentFocusId, region.id);
+  public unregisterRegion(regionId: string) {
+    const registeredRegion = this.regions.get(regionId);
 
-      if (registeredRegion.parentRegionId) {
-        this.removeChildTarget(registeredRegion.parentRegionId, {
-          type: "region",
-          id: region.id,
-        });
+    if (!registeredRegion) return;
+    const shouldRecoverFocus =
+      this.currentFocusId !== null &&
+      this.isNodeWithinRegion(this.currentFocusId, regionId);
+
+    if (registeredRegion.parentRegionId) {
+      this.removeChildTarget(registeredRegion.parentRegionId, {
+        type: "region",
+        id: regionId,
+      });
+    }
+
+    this.regions.delete(regionId);
+    this.regionChildren.delete(regionId);
+    this.reconcileLayerRootRegion(registeredRegion.layerId);
+    this.tryResolvePendingInitialFocus(registeredRegion.layerId);
+    this.tryResolvePendingRequestedFocus();
+
+    if (!registeredRegion.isPersistent) {
+      this.regionChildOrder.delete(regionId);
+      this.regionChildOrderCounter.delete(regionId);
+    }
+
+    this.lastFocusedByRegionId.delete(regionId);
+
+    if (shouldRecoverFocus) {
+      this.currentFocusId =
+        (registeredRegion.parentRegionId
+          ? this.resolveRecoveryFocus(registeredRegion.parentRegionId)
+          : null) ?? this.resolveFirstAvailableFocus();
+
+      if (this.currentFocusId) {
+        this.updateLastFocusedForNode(this.currentFocusId);
       }
+    }
 
-      this.regions.delete(region.id);
-      this.regionChildren.delete(region.id);
-      this.reconcileLayerRootRegion(registeredRegion.layerId);
-      this.tryResolvePendingInitialFocus(registeredRegion.layerId);
-      this.tryResolvePendingRequestedFocus();
-
-      if (!registeredRegion.isPersistent) {
-        this.regionChildOrder.delete(region.id);
-        this.regionChildOrderCounter.delete(region.id);
-      }
-
-      this.lastFocusedByRegionId.delete(region.id);
-
-      if (shouldRecoverFocus) {
-        this.currentFocusId =
-          (registeredRegion.parentRegionId
-            ? this.resolveRecoveryFocus(registeredRegion.parentRegionId)
-            : null) ?? this.resolveFirstAvailableFocus();
-
-        if (this.currentFocusId) {
-          this.updateLastFocusedForNode(this.currentFocusId);
-        }
-      }
-
-      this.notify();
-    };
+    this.notify();
   }
 
   public updateRegion(
@@ -455,7 +457,7 @@ export class NavigationService {
     const existingNode = this.nodes.get(node.id);
 
     if (existingNode) {
-      throw new Error(`Focus node "${node.id}" is already registered.`);
+      this.unregisterNavigationNode(node.id);
     }
 
     const region = this.regions.get(node.regionId);
@@ -506,30 +508,32 @@ export class NavigationService {
 
     this.notify();
 
-    return () => {
-      const registeredNode = this.nodes.get(node.id);
+    return () => this.unregisterNavigationNode(node.id);
+  }
 
-      if (!registeredNode) return;
+  public unregisterNavigationNode(nodeId: string) {
+    const registeredNode = this.nodes.get(nodeId);
 
-      this.nodes.delete(node.id);
-      this.removeChildTarget(registeredNode.regionId, {
-        type: "node",
-        id: node.id,
-      });
+    if (!registeredNode) return;
 
-      if (this.currentFocusId === node.id) {
-        this.currentFocusId =
-          this.resolveRecoveryFocus(registeredNode.regionId) ??
-          this.resolveFirstAvailableFocus();
+    this.nodes.delete(nodeId);
+    this.removeChildTarget(registeredNode.regionId, {
+      type: "node",
+      id: nodeId,
+    });
 
-        if (this.currentFocusId) {
-          this.updateLastFocusedForNode(this.currentFocusId);
-        }
+    if (this.currentFocusId === nodeId) {
+      this.currentFocusId =
+        this.resolveRecoveryFocus(registeredNode.regionId) ??
+        this.resolveFirstAvailableFocus();
+
+      if (this.currentFocusId) {
+        this.updateLastFocusedForNode(this.currentFocusId);
       }
+    }
 
-      this.tryResolvePendingRequestedFocus();
-      this.notify();
-    };
+    this.tryResolvePendingRequestedFocus();
+    this.notify();
   }
 
   public updateNavigationNode(

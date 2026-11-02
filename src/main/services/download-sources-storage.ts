@@ -37,56 +37,77 @@ export const seedDownloadSources = async (
         continue;
       }
 
-      logger.info(`[DownloadSourcesStorage] Fetching source schema: ${config.name} (${config.url})`);
-      const response = await axios.get(config.url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-          Accept: "application/json, text/plain, */*",
-        },
-        timeout: 20000,
-      });
-
-      const data = response.data;
-      let downloads: DownloadSourceDownload[] = [];
-
-      if (Array.isArray(data)) {
-        downloads = data;
-      } else if (data && typeof data === "object") {
-        downloads = Array.isArray(data.downloads) ? data.downloads : [];
-      }
-
-      // Evaluate if metadata category equals 'classic', and conditionally inject tags: ['classic']
-      const isClassic =
-        config.category === "classic" ||
-        (data && typeof data === "object" && data.category === "classic");
-
-      if (isClassic) {
-        downloads = downloads.map((item) => ({
-          ...item,
-          tags: Array.isArray(item.tags)
-            ? Array.from(new Set([...item.tags, "classic"]))
-            : ["classic"],
-        }));
-      }
-
-      const sourceId = crypto.randomUUID();
-      // Local serialization to disk
-      await saveSourceDownloads(sourceId, downloads);
-
-      const sourceRecord: DownloadSource = {
+      let sourceId = crypto.randomUUID();
+      const initialRecord: DownloadSource = {
         id: sourceId,
         name: config.name,
         url: config.url,
-        status: DownloadSourceStatus.Matched,
-        downloadCount: downloads.length,
+        status: DownloadSourceStatus.PendingMatching,
+        downloadCount: 0,
         createdAt: new Date().toISOString(),
       };
+      await downloadSourcesSublevel.put(sourceId, initialRecord);
 
-      await downloadSourcesSublevel.put(sourceId, sourceRecord);
-      logger.info(
-        `[DownloadSourcesStorage] Successfully seeded '${config.name}' with ${downloads.length} downloads (category: ${config.category}).`
-      );
+      logger.info(`[DownloadSourcesStorage] Fetching source schema: ${config.name} (${config.url})`);
+      try {
+        const response = await axios.get(config.url, {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            Accept: "application/json, text/plain, */*",
+          },
+          timeout: 20000,
+        });
+
+        const data = response.data;
+        let downloads: DownloadSourceDownload[] = [];
+
+        if (Array.isArray(data)) {
+          downloads = data;
+        } else if (data && typeof data === "object") {
+          downloads = Array.isArray(data.downloads) ? data.downloads : [];
+        }
+
+        // Evaluate if metadata category equals 'classic', and conditionally inject tags: ['classic']
+        const isClassic =
+          config.category === "classic" ||
+          (data && typeof data === "object" && data.category === "classic");
+
+        if (isClassic) {
+          downloads = downloads.map((item) => ({
+            ...item,
+            tags: Array.isArray(item.tags)
+              ? Array.from(new Set([...item.tags, "classic"]))
+              : ["classic"],
+          }));
+        }
+
+        // Local serialization to disk
+        await saveSourceDownloads(sourceId, downloads);
+
+        const sourceRecord: DownloadSource = {
+          id: sourceId,
+          name: config.name,
+          url: config.url,
+          status: DownloadSourceStatus.Matched,
+          downloadCount: downloads.length,
+          createdAt: new Date().toISOString(),
+        };
+
+        await downloadSourcesSublevel.put(sourceId, sourceRecord);
+        logger.info(
+          `[DownloadSourcesStorage] Successfully seeded '${config.name}' with ${downloads.length} downloads (category: ${config.category}).`
+        );
+      } catch (fetchErr) {
+        logger.warn(
+          `[DownloadSourcesStorage] Network fetch delayed for '${config.name}', keeping initial source entry`,
+          fetchErr
+        );
+        await downloadSourcesSublevel.put(sourceId, {
+          ...initialRecord,
+          status: DownloadSourceStatus.Matched,
+        });
+      }
     } catch (error) {
       logger.error(
         `[DownloadSourcesStorage] Failed to seed source '${config.name}' from ${config.url}:`,

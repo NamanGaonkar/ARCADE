@@ -33,6 +33,10 @@
     position: absolute;
     z-index: -1;
     transition: all ease 0.2s;
+
+    &--fallback {
+      background: linear-gradient(135deg, #1b2028 0%, #0d0f13 100%);
+    }
   }
 
   &__content {

@@ -14,19 +14,24 @@
     padding: 0;
     margin: 0;
     gap: calc(globals.$spacing-unit * 2);
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   }
 
   &__item {
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
     background-color: globals.$dark-background-color;
     border-radius: 8px;
     padding: calc(globals.$spacing-unit * 2);
-    gap: globals.$spacing-unit;
+    gap: calc(globals.$spacing-unit * 1.5);
     border: solid 1px globals.$border-color;
     transition: all ease 0.2s;
+
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
 
     &--syncing {
       opacity: globals.$disabled-opacity;
@@ -37,6 +42,44 @@
     }
   }
 
+  &__title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: globals.$spacing-unit;
+
+    h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+      color: #fff;
+    }
+  }
+
+  &__badges {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  &__url-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: globals.$spacing-unit;
+    padding-top: globals.$spacing-unit;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  &__url-text {
+    font-size: 12px;
+    color: globals.$muted-color;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+  }
+
   &__spinner {
     animation: spin 1s linear infinite;
     margin-right: calc(globals.$spacing-unit / 2);
@@ -45,7 +88,6 @@
   }
 
   &__item-header {
-    margin-bottom: globals.$spacing-unit;
     display: flex;
     flex-direction: column;
     gap: globals.$spacing-unit;
