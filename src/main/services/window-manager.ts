@@ -1150,6 +1150,7 @@ export class WindowManager {
         : this.mainWindow;
 
     if (!parentWindow || parentWindow.isDestroyed()) return;
+    if (!import.meta.env.MAIN_VITE_AUTH_URL) return;
 
     const authUrl = `${import.meta.env.MAIN_VITE_AUTH_URL}${page}?${searchParams.toString()}`;
 
@@ -1279,6 +1280,7 @@ export class WindowManager {
 
     const parentWindow = this.mainWindow;
     if (!parentWindow || parentWindow.isDestroyed()) return;
+    if (!import.meta.env.MAIN_VITE_AUTH_URL) return;
 
     const layout = getRetroAchievementsConnectionWindowLayout(process.platform);
     const connectionWindow = new BrowserWindow({

@@ -10,6 +10,9 @@ import {
 const catalogStore = new GameExecutableCatalogStore(process.platform);
 
 const loadGameExecutables = async () => {
+  if (!import.meta.env.MAIN_VITE_API_URL) {
+    return { executables: [] };
+  }
   try {
     const response = await axios.get<GameExecutableCatalogResponse>(
       `${import.meta.env.MAIN_VITE_API_URL}/catalogue/steam/executables`

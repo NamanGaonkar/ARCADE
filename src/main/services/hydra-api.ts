@@ -90,6 +90,9 @@ export class HydraApi {
   }
 
   public static async get<T>(_url: string, _params?: unknown, _options?: HydraApiOptions): Promise<T> {
+    if (_url === "/features") {
+      return [] as unknown as T;
+    }
     throw new Error(`ArcadeX local-only mode: remote GET '${_url}' is disabled.`);
   }
 

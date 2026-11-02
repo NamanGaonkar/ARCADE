@@ -328,21 +328,83 @@ export class NativeAddon {
     return path.join(app.getAppPath(), "hydra-native", "hydra-native.node");
   }
 
+  private static createFallbackModule(): HydraNativeModule {
+    return {
+      torrentInitialize: async () => {},
+      torrentRequest: async () => JSON.stringify({}),
+      torrentShutdown: async () => {},
+      processProfileImage: (imagePath: string) => ({
+        imagePath,
+        mimeType: "image/png",
+      }),
+      processImage: async (imagePath: string) => ({
+        imagePath,
+        mimeType: "image/png",
+        isAnimated: false,
+      }),
+      listProcesses: () => [],
+      getLinuxActiveWindow: () => null,
+      startScreenshotInput: () => ({
+        keyboardBackend: "none",
+        gamepadBackend: "none",
+        waylandSession: false,
+      }),
+      updateScreenshotInputBinding: () => false,
+      stopScreenshotInput: () => {},
+      probeScreenshotInput: () => ({
+        keyboardBackend: "none",
+        gamepadBackend: "none",
+        waylandSession: false,
+      }),
+      getWindowsForegroundWindow: () => null,
+      getWindowsWindowBounds: () => null,
+      extractArchiveInPlace: async () => ({
+        status: "unavailable",
+        message: "Native extraction module unavailable",
+      }),
+      inPlaceJournalExists: () => false,
+      buildLocalGameSnapshotPipeline: async () =>
+        ({ files: [], totalBytes: 0 }) as any,
+      buildLocalGameSnapshot: async () =>
+        ({ files: [], totalBytes: 0 }) as any,
+      getSaveRulesForGame: async () =>
+        ({ gameId: "", rules: [] }) as any,
+      buildSnapshotAggregateHash: () => "",
+      checkCloudSaveCustomPathOverlap: () =>
+        ({ hasOverlap: false }) as any,
+      uploadLocalSaveBlob: async () => {},
+      resolveRestoreTargets: async () => ({ files: [] }) as any,
+      downloadRestoreBlobToTemp: async () => "",
+      verifyDownloadedRestoreFile: async () =>
+        ({ isValid: true }) as any,
+      shouldSkipRestoreFile: async () => true,
+      replaceRestoreTargets: async () => ({ success: true }) as any,
+      deleteLocalSaveTargets: async () => ({ success: true }) as any,
+      cleanupRestoreTempSnapshot: async () => {},
+    };
+  }
+
   private static load() {
     if (this.nativeModule) return this.nativeModule;
 
     const addonPath = this.resolveAddonPath();
 
     if (!fs.existsSync(addonPath)) {
-      throw new Error(`Hydra native addon not found at ${addonPath}`);
+      logger.warn(`Native addon not found at ${addonPath}; using fallback.`);
+      this.nativeModule = this.createFallbackModule();
+      return this.nativeModule;
     }
 
-    const require = createRequire(import.meta.url);
-    const nativeModule = require(addonPath) as HydraNativeModule;
-
-    this.nativeModule = nativeModule;
-
-    return nativeModule;
+    try {
+      const require = createRequire(import.meta.url);
+      const nativeModule = require(addonPath) as HydraNativeModule;
+      this.nativeModule = nativeModule;
+      return nativeModule;
+    } catch (error) {
+      logger.warn("Failed to load native addon module; using fallback.", error);
+      this.nativeModule = this.createFallbackModule();
+      return this.nativeModule;
+    }
   }
 
   private static getWorker(): Worker {

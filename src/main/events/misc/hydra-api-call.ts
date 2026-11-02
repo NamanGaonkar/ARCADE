@@ -18,6 +18,9 @@ const hydraApiCall = async (
   _event: Electron.IpcMainInvokeEvent,
   payload: HydraApiCallPayload
 ) => {
+  if (payload.url === "/features") {
+    return [];
+  }
   // ArcadeX is 100% local-first and does not communicate with Hydra servers.
   throw new Error(
     `ArcadeX local-only mode: Hydra remote API endpoint '${payload.url}' is disabled.`
