@@ -42,10 +42,10 @@ export class Ludusavi {
 
   public static async copyBinaryToUserData() {
     if (!fs.existsSync(this.binaryPath)) {
-      fs.cpSync(
-        path.join(this.ludusaviResourcesPath, this.binaryName),
-        this.binaryPath
-      );
+      const src = path.join(this.ludusaviResourcesPath, this.binaryName);
+      if (fs.existsSync(src)) {
+        fs.cpSync(src, this.binaryPath);
+      }
     }
   }
 

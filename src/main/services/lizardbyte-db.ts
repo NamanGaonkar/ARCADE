@@ -98,19 +98,30 @@ export class LizardByteDBService {
 
     // 1. Exact match
     for (const [idStr, entry] of Object.entries(bucket)) {
-      if (entry.name && entry.name.toLowerCase().trim() === cleanTitle) {
+      if (!entry.name) continue;
+      const lower = entry.name.toLowerCase().trim();
+      if (lower === cleanTitle || lower === title.toLowerCase().trim()) {
         return Number(idStr);
       }
     }
 
-    // 2. Contains match
+    // 2. Best candidate with closest length
+    let bestMatchId: number | null = null;
+    let minDiff = Infinity;
+
     for (const [idStr, entry] of Object.entries(bucket)) {
       if (!entry.name) continue;
-      const entryLower = entry.name.toLowerCase().trim();
-      if (entryLower.includes(cleanTitle) || cleanTitle.includes(entryLower)) {
-        return Number(idStr);
+      const lower = entry.name.toLowerCase().trim();
+      if (lower.includes(cleanTitle) || cleanTitle.includes(lower)) {
+        const diff = Math.abs(lower.length - cleanTitle.length);
+        if (diff < minDiff) {
+          minDiff = diff;
+          bestMatchId = Number(idStr);
+        }
       }
     }
+
+    if (bestMatchId !== null) return bestMatchId;
 
     // 3. First word match if multi-word
     const firstWord = cleanTitle.split(" ")[0];

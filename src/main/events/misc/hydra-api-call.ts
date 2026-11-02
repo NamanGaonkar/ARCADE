@@ -5,6 +5,7 @@ import {
   findDownloadsForGame,
   getMatchingSourceNamesForGame,
 } from "@main/services/download-sources-storage";
+import { LizardByteDBService } from "@main/services/lizardbyte-db";
 import { getSteamAppDetails } from "@main/services/steam";
 import {
   gamesShopCacheSublevel,
@@ -77,20 +78,100 @@ async function mapSteamItemToShopAssets(item: any): Promise<ShopAssets> {
     item.header_image ||
     `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`;
 
-  const sources = await getMatchingSourceNamesForGame(item.name).catch(() => []);
+  let libraryHeroImageUrl = `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_hero.jpg`;
+  let libraryImageUrl = `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_600x900.jpg`;
+  let logoImageUrl = `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/logo.png`;
+  let coverImageUrl = headerUrl;
+
+  const [sources, lbDetails] = await Promise.all([
+    getMatchingSourceNamesForGame(item.name).catch(() => []),
+    LizardByteDBService.fetchGameByTitle(item.name).catch(() => null),
+  ]);
+
+  if (lbDetails) {
+    if (lbDetails.heroUrl) libraryHeroImageUrl = lbDetails.heroUrl;
+    if (lbDetails.coverUrl) {
+      libraryImageUrl = lbDetails.coverUrl;
+      coverImageUrl = lbDetails.coverUrl;
+    }
+  }
 
   return {
     objectId,
     shop: "steam",
     title: item.name,
-    iconUrl: headerUrl,
-    libraryHeroImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_hero.jpg`,
-    libraryImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_600x900.jpg`,
-    logoImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/logo.png`,
-    coverImageUrl: headerUrl,
+    iconUrl: coverImageUrl || headerUrl,
+    libraryHeroImageUrl,
+    libraryImageUrl,
+    logoImageUrl,
+    coverImageUrl,
     logoPosition: null,
     downloadSources: sources,
   };
+}
+
+const CURATED_FEATURED_TITLES = {
+  hot: [
+    "Cyberpunk 2077",
+    "Grand Theft Auto V",
+    "Red Dead Redemption 2",
+    "Elden Ring",
+    "Baldur's Gate 3",
+    "God of War",
+    "The Witcher 3: Wild Hunt",
+    "Marvel's Spider-Man Remastered",
+  ],
+  weekly: [
+    "Hogwarts Legacy",
+    "Resident Evil 4",
+    "Sekiro: Shadows Die Twice",
+    "Forza Horizon 5",
+    "Fallout 4",
+    "The Last of Us Part I",
+    "Monster Hunter: World",
+    "Horizon Zero Dawn",
+  ],
+  achievements: [
+    "Lies of P",
+    "Palworld",
+    "Hades II",
+    "Alan Wake 2",
+    "Starfield",
+    "Days Gone",
+    "Detroit: Become Human",
+    "Dark Souls III",
+  ],
+};
+
+async function getCuratedShopAssets(titles: string[]): Promise<ShopAssets[]> {
+  const results = await Promise.all(
+    titles.map(async (title) => {
+      try {
+        const [lb, sources] = await Promise.all([
+          LizardByteDBService.fetchGameByTitle(title).catch(() => null),
+          getMatchingSourceNamesForGame(title).catch(() => []),
+        ]);
+
+        const objectId = String(lb?.id ?? Math.abs(title.split("").reduce((a, b) => (a << 5) - a + b.charCodeAt(0), 0)));
+        return {
+          objectId,
+          shop: "steam" as const,
+          title: lb?.name || title,
+          iconUrl: lb?.coverUrl || "",
+          libraryHeroImageUrl: lb?.heroUrl || lb?.artworkUrls?.[0] || lb?.screenshotUrls?.[0] || "",
+          libraryImageUrl: lb?.coverUrl || "",
+          logoImageUrl: lb?.heroUrl || "",
+          coverImageUrl: lb?.coverUrl || "",
+          logoPosition: null,
+          downloadSources: sources,
+        };
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  return results.filter(Boolean) as ShopAssets[];
 }
 
 const hydraApiCall = async (
@@ -140,10 +221,49 @@ const hydraApiCall = async (
         iconUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${item.id}/header.jpg`,
       }));
 
+      if (suggestions.length < 8) {
+        const localMatches = await findDownloadsForGame(query).catch(() => []);
+        const seen = new Set(suggestions.map((s) => s.title.toLowerCase()));
+        for (const m of localMatches) {
+          const tLower = m.title.toLowerCase();
+          if (!seen.has(tLower)) {
+            seen.add(tLower);
+            suggestions.push({
+              title: m.title,
+              objectId: m.id,
+              shop: "custom" as GameShop,
+              iconUrl: "",
+            });
+            if (suggestions.length >= 8) break;
+          }
+        }
+      }
+
       return suggestions;
     } catch (err) {
       logger.error("[hydraApiCall] Suggestions error:", err);
-      return [];
+      // Fallback to local repack suggestions
+      try {
+        const localMatches = await findDownloadsForGame(query);
+        const seen = new Set<string>();
+        const fallback: any[] = [];
+        for (const m of localMatches) {
+          const tLower = m.title.toLowerCase();
+          if (!seen.has(tLower)) {
+            seen.add(tLower);
+            fallback.push({
+              title: m.title,
+              objectId: m.id,
+              shop: "custom" as GameShop,
+              iconUrl: "",
+            });
+            if (fallback.length >= 8) break;
+          }
+        }
+        return fallback;
+      } catch {
+        return [];
+      }
     }
   }
 
@@ -153,13 +273,19 @@ const hydraApiCall = async (
     url.startsWith("/catalogue/weekly") ||
     url.startsWith("/catalogue/achievements")
   ) {
+    let categoryKey: "hot" | "weekly" | "achievements" = "hot";
+    if (url.startsWith("/catalogue/weekly")) categoryKey = "weekly";
+    else if (url.startsWith("/catalogue/achievements")) categoryKey = "achievements";
+
+    const curatedPromise = getCuratedShopAssets(CURATED_FEATURED_TITLES[categoryKey]);
+
     const categories = await getSteamFeaturedCategories();
     let rawItems: any[] = [];
 
-    if (url.startsWith("/catalogue/hot")) {
+    if (categoryKey === "hot") {
       rawItems =
         categories.top_sellers?.items || categories.featured_win?.items || [];
-    } else if (url.startsWith("/catalogue/weekly")) {
+    } else if (categoryKey === "weekly") {
       rawItems =
         categories.specials?.items || categories.top_sellers?.items || [];
     } else {
@@ -168,7 +294,40 @@ const hydraApiCall = async (
     }
 
     const filtered = rawItems.filter((item) => !isNonGameItem(item));
-    return Promise.all(filtered.map(mapSteamItemToShopAssets));
+    const [curatedList, steamMapped] = await Promise.all([
+      curatedPromise,
+      Promise.all(filtered.map(mapSteamItemToShopAssets)),
+    ]);
+
+    const seen = new Set<string>();
+    const combined: ShopAssets[] = [];
+
+    // Prioritize curated titles first (verified repacks + 1080p hero art)
+    for (const item of curatedList) {
+      const lower = item.title.toLowerCase().trim();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        combined.push(item);
+      }
+    }
+
+    // Add steam items that have download sources
+    for (const item of steamMapped) {
+      const lower = item.title.toLowerCase().trim();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        combined.push(item);
+      }
+    }
+
+    // Sort so games with available download sources always appear first
+    combined.sort((a, b) => {
+      const aHas = (a.downloadSources?.length || 0) > 0 ? 1 : 0;
+      const bHas = (b.downloadSources?.length || 0) > 0 ? 1 : 0;
+      return bHas - aHas;
+    });
+
+    return combined.slice(0, 16);
   }
 
   // Similar Games (/catalogue/:shop/:objectId/similar)

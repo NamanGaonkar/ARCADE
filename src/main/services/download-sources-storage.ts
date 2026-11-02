@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import crypto from "node:crypto";
 import axios from "axios";
 import { app } from "electron";
 import { downloadSourcesSublevel } from "@main/level";
@@ -105,12 +104,33 @@ export const loadSourceDownloads = async (
   }
 
   try {
-    const filePath = getSourceFilePath(sourceId);
-    if (!fs.existsSync(filePath)) return [];
+    const dir = getSourcesDir();
+    let filePath = getSourceFilePath(sourceId);
+    if (!fs.existsSync(filePath)) {
+      const files = await fs.promises.readdir(dir).catch(() => []);
+      const matched = files.find(
+        (f) =>
+          f.toLowerCase().replace(/\.json$/, "") ===
+          sourceId.toLowerCase().replace(/\.json$/, "")
+      );
+      if (matched) {
+        filePath = path.join(dir, matched);
+      } else {
+        return [];
+      }
+    }
+
     const content = await fs.promises.readFile(filePath, "utf8");
-    const parsed = JSON.parse(content) as DownloadSourceDownload[];
-    inMemoryDownloadsCache.set(sourceId, parsed);
-    return parsed;
+    const raw = JSON.parse(content);
+    let downloads: DownloadSourceDownload[] = [];
+    if (Array.isArray(raw)) {
+      downloads = raw;
+    } else if (raw && typeof raw === "object" && Array.isArray(raw.downloads)) {
+      downloads = raw.downloads;
+    }
+
+    inMemoryDownloadsCache.set(sourceId, downloads);
+    return downloads;
   } catch (error) {
     logger.error(`[DownloadSourcesStorage] Failed to load downloads for source ${sourceId}`, error);
     return [];
@@ -175,21 +195,50 @@ export const seedDownloadSources = async (
 ): Promise<void> => {
   logger.info("[DownloadSourcesStorage] Starting initial sources seeding routine...");
 
+  const dir = getSourcesDir();
+  const existingFiles = await fs.promises.readdir(dir).catch(() => []);
+
   for (const config of configs) {
     try {
       const existingSources = await downloadSourcesSublevel.values().all();
-      const existing = existingSources.find((s) => s.url === config.url || s.name === config.name);
+      const existing = existingSources.find(
+        (s) => s.url === config.url || s.name === config.name
+      );
 
-      let sourceId = existing ? existing.id : crypto.randomUUID();
-      const filePath = getSourceFilePath(sourceId);
+      const slug = config.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      let sourceId = existing ? existing.id : slug;
+      let filePath = getSourceFilePath(sourceId);
 
-      // Check if file already exists on disk and is non-empty
-      if (existing && fs.existsSync(filePath)) {
+      // Check if file already exists on disk under slug or name or uuid
+      const matchedFile = existingFiles.find((f) => {
+        const base = f.toLowerCase().replace(/\.json$/, "");
+        return (
+          base === slug ||
+          base === sourceId ||
+          config.name.toLowerCase().includes(base) ||
+          base.includes(slug.slice(0, 4))
+        );
+      });
+
+      if (matchedFile) {
+        filePath = path.join(dir, matchedFile);
+        sourceId = matchedFile.replace(/\.json$/, "");
         try {
-          const stat = await fs.promises.stat(filePath);
-          if (stat.size > 500) {
-            // Already seeded and valid
-            logger.info(`[DownloadSourcesStorage] Source '${config.name}' already on disk (${stat.size} bytes).`);
+          const raw = JSON.parse(await fs.promises.readFile(filePath, "utf8"));
+          const items: any[] = Array.isArray(raw) ? raw : raw.downloads || [];
+          if (items.length > 0) {
+            inMemoryDownloadsCache.set(sourceId, items);
+            await downloadSourcesSublevel.put(sourceId, {
+              id: sourceId,
+              name: config.name,
+              url: config.url,
+              status: DownloadSourceStatus.Matched,
+              downloadCount: items.length,
+              createdAt: existing?.createdAt || new Date().toISOString(),
+            });
+            logger.info(
+              `[DownloadSourcesStorage] Synced local source '${config.name}' (${items.length} downloads) to LevelDB.`
+            );
             continue;
           }
         } catch {}
@@ -211,7 +260,6 @@ export const seedDownloadSources = async (
         let downloads: DownloadSourceDownload[] = [];
 
         if (Array.isArray(data)) {
-          // Can be array of repacks
           downloads = data.map((item: any) => ({
             title: item.title || item.name || "",
             fileSize: item.fileSize || item.packed || item.original || "N/A",
@@ -229,7 +277,6 @@ export const seedDownloadSources = async (
           downloads = Array.isArray(data.downloads) ? data.downloads : [];
         }
 
-        // Evaluate if metadata category equals 'classic', and conditionally inject tags: ['classic']
         const isClassic =
           config.category === "classic" ||
           (data && typeof data === "object" && data.category === "classic");
@@ -243,7 +290,6 @@ export const seedDownloadSources = async (
           }));
         }
 
-        // Local serialization to disk
         await saveSourceDownloads(sourceId, downloads);
 
         const sourceRecord: DownloadSource = {
@@ -300,10 +346,46 @@ export const findDownloadsForGame = async (
   const queryTokens = normalizedGameTitle.split(" ").filter((t) => t.length > 2);
 
   try {
-    const sources = await downloadSourcesSublevel.values().all();
+    const dir = getSourcesDir();
+    const files = await fs.promises.readdir(dir).catch(() => []);
 
-    for (const source of sources) {
-      const downloads = await loadSourceDownloads(source.id);
+    for (const file of files) {
+      if (!file.endsWith(".json")) continue;
+      const sourceKey = file.replace(/\.json$/, "");
+      const filePath = path.join(dir, file);
+
+      let downloads = inMemoryDownloadsCache.get(sourceKey);
+      let sourceName = sourceKey;
+
+      if (!downloads) {
+        try {
+          const content = await fs.promises.readFile(filePath, "utf8");
+          const raw = JSON.parse(content);
+          if (Array.isArray(raw)) {
+            downloads = raw;
+          } else if (raw && typeof raw === "object") {
+            downloads = Array.isArray(raw.downloads) ? raw.downloads : [];
+            if (raw.name) sourceName = raw.name;
+          }
+          if (downloads) {
+            inMemoryDownloadsCache.set(sourceKey, downloads);
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      if (!downloads || !Array.isArray(downloads)) continue;
+
+      const lowerKey = sourceKey.toLowerCase();
+      let displayName = sourceName;
+      if (lowerKey.includes("fitgirl")) displayName = "FitGirl Repacks";
+      else if (lowerKey.includes("dodi")) displayName = "DODI Repacks";
+      else if (lowerKey.includes("steamrip")) displayName = "SteamRip";
+      else if (lowerKey.includes("gog")) displayName = "GOG";
+      else if (lowerKey.includes("onlinefix")) displayName = "OnlineFix";
+      else if (lowerKey.includes("psx") || lowerKey.includes("xatab"))
+        displayName = "PSX Roms (Retro)";
 
       downloads.forEach((item, index) => {
         if (!item.title) return;
@@ -316,21 +398,25 @@ export const findDownloadsForGame = async (
 
         let isTokenMatch = false;
         if (!isExactOrSubstring && queryTokens.length >= 2) {
-          isTokenMatch = queryTokens.every((token) => normalizedItemTitle.includes(token));
+          isTokenMatch = queryTokens.every((token) =>
+            normalizedItemTitle.includes(token)
+          );
         }
 
         if (isExactOrSubstring || isTokenMatch) {
           results.push({
-            id: `${source.id}-${index}`,
+            id: `${sourceKey}-${index}`,
             title: item.title,
             fileSize: item.fileSize ?? null,
             uris: Array.isArray(item.uris) ? item.uris : [],
-            uriGroups: Array.isArray(item.uriGroups) ? item.uriGroups : undefined,
+            uriGroups: Array.isArray(item.uriGroups)
+              ? item.uriGroups
+              : undefined,
             unavailableUris: [],
             uploadDate: item.uploadDate ?? null,
-            downloadSourceId: source.id,
-            downloadSourceName: source.name,
-            createdAt: source.createdAt || new Date().toISOString(),
+            downloadSourceId: sourceKey,
+            downloadSourceName: displayName,
+            createdAt: new Date().toISOString(),
           });
         }
       });

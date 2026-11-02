@@ -1453,16 +1453,17 @@ export class DownloadManager {
     let seedStatus: LibtorrentPayload[] = [];
 
     try {
-      seedStatus = await TorrentService.call<LibtorrentPayload[] | []>(
+      const res = await TorrentService.call<LibtorrentPayload[] | []>(
         "seed_status"
-      ).then((res) => res.data);
+      );
+      seedStatus = Array.isArray(res?.data) ? res.data : [];
     } catch (error) {
       logger.error("[DownloadManager] Torrent seed status poll failed", error);
       WindowManager.sendToAppWindows("on-seeding-status", []);
       return;
     }
 
-    if (!seedStatus.length) {
+    if (!seedStatus?.length) {
       WindowManager.sendToAppWindows("on-seeding-status", []);
       return;
     }
