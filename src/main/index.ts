@@ -91,7 +91,6 @@ i18n.init({
 });
 
 const PROTOCOL = "arcadex";
-const LEGACY_PROTOCOL = "hydralauncher";
 
 // Register the custom schemes as privileged so the renderer can fetch them
 // (supportFetchAPI) and use the results on a canvas without tainting it
@@ -112,13 +111,9 @@ if (process.defaultApp) {
     app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [
       path.resolve(process.argv[1]),
     ]);
-    app.setAsDefaultProtocolClient(LEGACY_PROTOCOL, process.execPath, [
-      path.resolve(process.argv[1]),
-    ]);
   }
 } else {
   app.setAsDefaultProtocolClient(PROTOCOL);
-  app.setAsDefaultProtocolClient(LEGACY_PROTOCOL);
 }
 
 const initializeApp = async () => {
@@ -228,8 +223,7 @@ const initializeApp = async () => {
 
   // Check if starting from a "run" deep link - don't show main window in that case
   const deepLinkArg = process.argv.find(
-    (arg) =>
-      arg.startsWith("arcadex://") || arg.startsWith("hydralauncher://")
+    (arg) => arg.startsWith("arcadex://")
   );
   const forceBigPicture = process.argv.includes("--big-picture");
 
@@ -392,8 +386,7 @@ const handleDeepLinkPath = (uri?: string) => {
 
 app.on("second-instance", (_event, commandLine) => {
   const deepLink = commandLine.find(
-    (arg) =>
-      arg.startsWith("arcadex://") || arg.startsWith("hydralauncher://")
+    (arg) => arg.startsWith("arcadex://")
   );
   const forceBigPicture = commandLine.includes("--big-picture");
 

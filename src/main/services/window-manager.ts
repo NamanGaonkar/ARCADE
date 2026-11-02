@@ -2,6 +2,9 @@ import { is } from "@electron-toolkit/utils";
 import { isStaging } from "@main/constants";
 import { db, gamesSublevel, levelKeys } from "@main/level";
 import icon from "@resources/icon.png?asset";
+import iconIco from "@resources/icon.ico?asset";
+
+const appIcon = process.platform === "win32" ? iconIco : icon;
 import trayIconDark from "@resources/tray-icon-dark.png?asset";
 import trayIcon from "@resources/tray-icon.png?asset";
 import {
@@ -141,7 +144,7 @@ export class WindowManager {
       minWidth: WindowManager.MIN_WINDOW_WIDTH,
       minHeight: WindowManager.MIN_WINDOW_HEIGHT,
       title: "ArcadeX",
-      icon,
+      icon: appIcon,
       trafficLightPosition: { x: 16, y: 16 },
       webPreferences: {
         preload: path.join(__dirname, "../preload/index.mjs"),
@@ -532,7 +535,7 @@ export class WindowManager {
       width: targetBounds.width,
       height: targetBounds.height,
       backgroundColor: "#0a0a0a",
-      icon,
+      icon: appIcon,
       frame: false,
       show: false,
       webPreferences: {
@@ -602,7 +605,7 @@ export class WindowManager {
       // No native frame/controls — the renderer draws its own minimize and
       // close buttons in the title bar (see friends-window.tsx).
       frame: false,
-      icon,
+      icon: appIcon,
       webPreferences: {
         preload: path.join(__dirname, "../preload/index.mjs"),
         sandbox: false,
@@ -748,7 +751,7 @@ export class WindowManager {
       // No native frame/controls — the renderer draws its own tab strip and
       // window controls (see chat-window.tsx).
       frame: false,
-      icon,
+      icon: appIcon,
       webPreferences: {
         preload: path.join(__dirname, "../preload/index.mjs"),
         sandbox: false,
@@ -1210,7 +1213,7 @@ export class WindowManager {
       maximizable: false,
       resizable: false,
       frame: false,
-      icon,
+      icon: appIcon,
       backgroundColor: "#1c1c1c",
       webPreferences: {
         preload: path.join(__dirname, "../preload/index.mjs"),
@@ -1295,7 +1298,7 @@ export class WindowManager {
       resizable: false,
       minimizable: layout.minimizable,
       frame: layout.frame,
-      icon,
+      icon: appIcon,
       webPreferences: {
         preload: path.join(__dirname, "../preload/index.mjs"),
         sandbox: false,
@@ -1376,7 +1379,7 @@ export class WindowManager {
         minHeight: 540,
         backgroundColor: "#1c1c1c",
         titleBarStyle: process.platform === "linux" ? "default" : "hidden",
-        icon,
+        icon: appIcon,
         trafficLightPosition: { x: 16, y: 16 },
         titleBarOverlay: {
           symbolColor: "#DADBE1",
@@ -1458,7 +1461,7 @@ export class WindowManager {
       fullscreenable: false,
       frame: false,
       backgroundColor: "#1c1c1c",
-      icon,
+      icon: appIcon,
       skipTaskbar: false,
       webPreferences: {
         preload: path.join(__dirname, "../preload/index.mjs"),

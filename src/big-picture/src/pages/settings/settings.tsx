@@ -58,8 +58,6 @@ const ALL_SETTINGS_TABS = [
   { id: "big-picture", label: "Big Picture" },
   { id: "emulation", label: "Emulation" },
   { id: "integrations", label: "Integrations" },
-  { id: "compatibility", label: "Compatibility" },
-  { id: "account-privacy", label: "Account and Privacy" },
 ] as const;
 
 const SETTINGS_PAGE_FADE_TRANSITION = {
@@ -106,8 +104,6 @@ const SETTINGS_TAB_CONTENT: Record<
   "big-picture": BigPictureSettingsSection,
   emulation: EmulationSettingsSection,
   integrations: IntegrationsSettingsSection,
-  compatibility: CompatibilitySettingsSection,
-  "account-privacy": AccountPrivacySettingsSection,
 };
 
 function SettingsTabPanel({

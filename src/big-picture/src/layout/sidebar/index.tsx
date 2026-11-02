@@ -402,7 +402,7 @@ function SidebarRouter() {
       ...sidebarItemNavigationOverrides,
       up: previousRoute
         ? getItemFocusTarget(BIG_PICTURE_SIDEBAR_ITEM_IDS[previousRoute.key])
-        : getItemFocusTarget(BIG_PICTURE_SIDEBAR_PROFILE_ID),
+        : undefined,
       down: nextRoute
         ? getItemFocusTarget(BIG_PICTURE_SIDEBAR_ITEM_IDS[nextRoute.key])
         : getItemFocusTarget(BIG_PICTURE_SIDEBAR_POWER_ID),
@@ -414,7 +414,7 @@ function SidebarRouter() {
     ...sidebarItemNavigationOverrides,
     up: lastRoute
       ? getItemFocusTarget(BIG_PICTURE_SIDEBAR_ITEM_IDS[lastRoute.key])
-      : getItemFocusTarget(BIG_PICTURE_SIDEBAR_PROFILE_ID),
+      : undefined,
     down: getItemFocusTarget(BIG_PICTURE_SIDEBAR_LIBRARY_FILTER_ALL_ID),
   };
 
@@ -1100,15 +1100,6 @@ function Sidebar() {
           onFocusWithinChange={setSidebarFocusWithin}
           onHoverChange={setSidebarHovered}
         >
-          <SidebarProfile
-            library={library}
-            runningGamesById={runningGamesById}
-            notificationsOpen={notificationsOpen}
-            notificationsFocusable={sidebarExpanded}
-            onNotificationsOpenChange={setNotificationsOpen}
-            onNotificationsRestoringFocusChange={setRestoringNotificationsFocus}
-          />
-          <Divider />
           <SidebarRouter />
           <Divider />
           <SidebarLibrary

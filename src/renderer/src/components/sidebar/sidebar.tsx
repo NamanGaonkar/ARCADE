@@ -48,7 +48,6 @@ import {
   SIDEBAR_SOURCES_STORAGE_KEY,
 } from "@renderer/session-state";
 import { SidebarGameList } from "./sidebar-game-list";
-import { SidebarProfile } from "./sidebar-profile";
 
 const SIDEBAR_MIN_WIDTH = 200;
 const SIDEBAR_INITIAL_WIDTH = 250;
@@ -502,8 +501,6 @@ export function Sidebar() {
       )}
 
       <div className="sidebar__container">
-        <SidebarProfile />
-
         <div className="sidebar__content">
           <section className="sidebar__section">
             <ul className="sidebar__menu">

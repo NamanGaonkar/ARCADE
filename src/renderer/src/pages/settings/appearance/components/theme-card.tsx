@@ -85,14 +85,7 @@ export const ThemeCard = ({ theme, onListUpdated }: ThemeCardProps) => {
 
         {theme.authorName && (
           <p className="theme-card__author">
-            {t("by")}
-
-            <button
-              className="theme-card__author__name"
-              onClick={() => navigate(`/profile/${theme.author}`)}
-            >
-              {theme.authorName}
-            </button>
+            {t("by")} <span className="theme-card__author__name">{theme.authorName}</span>
           </p>
         )}
 

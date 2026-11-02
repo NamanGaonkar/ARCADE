@@ -76,6 +76,18 @@ async function afterPack(context) {
   if (platform === process.platform && arch === process.arch) {
     await verifyLegendaryVersion(binaryPath, manifest.version);
   }
+
+  if (platform === "win32") {
+    const { execSync } = require("node:child_process");
+    const exePath = path.join(context.appOutDir, "ArcadeX.exe");
+    const iconPath = path.join(context.packager.projectDir, "build", "icon.ico");
+    try {
+      execSync(`rcedit "${exePath}" --set-icon "${iconPath}"`, { stdio: "inherit" });
+      console.log(`[afterPack] Successfully set ArcadeX icon on ${exePath}`);
+    } catch (err) {
+      console.warn(`[afterPack] rcedit warning:`, err.message);
+    }
+  }
 }
 
 module.exports = afterPack;

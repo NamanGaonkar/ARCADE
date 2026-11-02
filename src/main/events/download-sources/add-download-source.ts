@@ -1,13 +1,16 @@
+import axios from "axios";
+import crypto from "node:crypto";
 import { registerEvent } from "../register-event";
-import { HydraApi } from "@main/services/hydra-api";
 import { downloadSourcesSublevel } from "@main/level";
-import type { DownloadSource } from "@types";
+import { DownloadSourceStatus } from "@shared";
+import type { DownloadSource, DownloadSourceDownload } from "@types";
 import { logger } from "@main/services";
+import { saveSourceDownloads } from "@main/services/download-sources-storage";
 
 const addDownloadSource = async (
   _event: Electron.IpcMainInvokeEvent,
   url: string
-) => {
+): Promise<DownloadSource> => {
   try {
     const existingSources = await downloadSourcesSublevel.values().all();
     const urlExists = existingSources.some((source) => source.url === url);
@@ -16,29 +19,48 @@ const addDownloadSource = async (
       throw new Error("Download source with this URL already exists");
     }
 
-    const downloadSource = await HydraApi.post<DownloadSource>(
-      "/download-sources",
-      {
-        url,
+    logger.info(`[addDownloadSource] Fetching source from: ${url}`);
+    const response = await axios.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ArcadeX/1.0.0",
+        Accept: "application/json, text/plain, */*",
       },
-      { needsAuth: false }
-    );
+      timeout: 20000,
+    });
 
-    if (HydraApi.isLoggedIn() && HydraApi.hasActiveSubscription()) {
+    const data = response.data;
+    let name = "Custom Source";
+    let downloads: DownloadSourceDownload[] = [];
+
+    if (Array.isArray(data)) {
+      downloads = data;
       try {
-        await HydraApi.post("/profile/download-sources", {
-          urls: [url],
-        });
-      } catch (error) {
-        logger.error("Failed to add download source to profile:", error);
+        name =
+          new URL(url).pathname.split("/").pop()?.replace(".json", "") ||
+          "Custom Source";
+      } catch {
+        name = "Custom Source";
       }
+    } else if (data && typeof data === "object") {
+      name = data.name || data.title || "Custom Source";
+      downloads = Array.isArray(data.downloads) ? data.downloads : [];
     }
 
-    await downloadSourcesSublevel.put(downloadSource.id, {
-      ...downloadSource,
-      isRemote: true,
+    const id = crypto.randomUUID();
+    const downloadSource: DownloadSource = {
+      id,
+      name,
+      url,
+      status: DownloadSourceStatus.Matched,
+      downloadCount: downloads.length,
       createdAt: new Date().toISOString(),
-    });
+    };
+
+    await saveSourceDownloads(id, downloads);
+    await downloadSourcesSublevel.put(id, downloadSource);
+    logger.info(
+      `[addDownloadSource] Added source '${name}' with ${downloads.length} downloads.`
+    );
 
     return downloadSource;
   } catch (error) {
