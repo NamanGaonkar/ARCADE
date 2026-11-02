@@ -1,7 +1,10 @@
 !macro customInstall
-  ${if} ${FileExists} "$INSTDIR\app-icon.ico"
-    CreateShortCut "$DESKTOP\ArcadeX.lnk" "$INSTDIR\ArcadeX.exe" "" "$INSTDIR\app-icon.ico" 0
-    CreateShortCut "$SMPROGRAMS\ArcadeX.lnk" "$INSTDIR\ArcadeX.exe" "" "$INSTDIR\app-icon.ico" 0
+  ${if} ${FileExists} "$INSTDIR\resources\app-icon.ico"
+    CreateShortCut "$DESKTOP\ArcadeX.lnk" "$INSTDIR\ArcadeX.exe" "" "$INSTDIR\resources\app-icon.ico" 0
+    CreateShortCut "$SMPROGRAMS\ArcadeX.lnk" "$INSTDIR\ArcadeX.exe" "" "$INSTDIR\resources\app-icon.ico" 0
+  ${else}
+    CreateShortCut "$DESKTOP\ArcadeX.lnk" "$INSTDIR\ArcadeX.exe" "" "$INSTDIR\ArcadeX.exe" 0
+    CreateShortCut "$SMPROGRAMS\ArcadeX.lnk" "$INSTDIR\ArcadeX.exe" "" "$INSTDIR\ArcadeX.exe" 0
   ${endIf}
 !macroend
 

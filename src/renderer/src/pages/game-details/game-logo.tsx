@@ -16,11 +16,19 @@ const getImageWithCustomPriority = (
 export function GameLogo({ game, shopDetails }: Readonly<GameLogoProps>) {
   const isCustomGame = game?.shop === "custom";
 
+  const logoFallback =
+    shopDetails?.assets?.logoImageUrl ||
+    game?.logoImageUrl ||
+    (shopDetails?.steam_appid
+      ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${shopDetails.steam_appid}/logo.png`
+      : "") ||
+    "";
+
   const logoImage = isCustomGame
     ? game?.logoImageUrl || ""
     : getImageWithCustomPriority(
         game?.customLogoImageUrl,
-        shopDetails?.assets?.logoImageUrl
+        logoFallback
       );
 
   const title = game?.title || shopDetails?.name || "";

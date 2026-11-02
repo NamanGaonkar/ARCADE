@@ -27,6 +27,7 @@ import { TorrentService } from "./services/torrent-service";
 import { DownloadManager } from "./services/download/download-manager";
 import { db, gamesSublevel, levelKeys } from "./level";
 import { migrateHydraDataToArcadeX } from "./level/migration";
+import { seedDownloadSources } from "./services/download-sources-storage";
 import { GameShop, UserPreferences } from "@types";
 import { launchGame, openClassicsGame } from "./helpers";
 import {
@@ -220,6 +221,10 @@ const initializeApp = async () => {
     .catch(() => "en");
 
   if (language) i18n.changeLanguage(language);
+
+  seedDownloadSources().catch((error) => {
+    logger.warn("Initial download sources seeding error", error);
+  });
 
   // Check if starting from a "run" deep link - don't show main window in that case
   const deepLinkArg = process.argv.find(

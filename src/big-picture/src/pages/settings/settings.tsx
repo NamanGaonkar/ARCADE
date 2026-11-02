@@ -16,9 +16,7 @@ import {
 } from "../../services";
 import { GamepadButtonType } from "../../types";
 import { useVirtualKeyboardStore } from "../../stores";
-import { AccountPrivacySettingsSection } from "./account-privacy";
 import { BigPictureSettingsSection } from "./big-picture";
-import { CompatibilitySettingsSection } from "./compatibility";
 import { ContentSettingsSection } from "./content";
 import { DownloadsSettingsSection } from "./downloads";
 import { EmulationSettingsSection } from "./emulation";
@@ -34,9 +32,6 @@ import { ScreenshotsSettingsSection } from "./screenshots";
 import { SCREENSHOT_SETTINGS_FOCUS_IDS } from "./screenshots-section";
 import { useUserDetails } from "../../hooks";
 import {
-  ACCOUNT_PRIVACY_PRIVACY_SELECT_ID,
-  COMPATIBILITY_COMMON_REDIST_BUTTON_ID,
-  COMPATIBILITY_PROTON_OPTION_AUTO_FOCUS_ID,
   CONTENT_ITEM_FOCUS_IDS,
   BIG_PICTURE_ITEM_FOCUS_IDS,
   DOWNLOADS_BEHAVIOR_ITEM_FOCUS_IDS,
@@ -178,11 +173,9 @@ export default function Settings() {
   const visibleTabs = useMemo(() => {
     return ALL_SETTINGS_TABS.filter((tab) => {
       if (tab.id === "screenshots") return showScreenshotsTab;
-      if (tab.id !== "account-privacy") return true;
-
-      return Boolean(userDetails);
+      return true;
     });
-  }, [showScreenshotsTab, userDetails]);
+  }, [showScreenshotsTab]);
 
   const selectedTabIndex = visibleTabs.findIndex(
     (tab) => tab.id === selectedTab
@@ -278,8 +271,6 @@ export default function Settings() {
   }, [visibleTabs]);
 
   const initialFocusTarget = useMemo<FocusOverrideTarget | null>(() => {
-    const platform = globalThis.window.electron.platform;
-
     switch (selectedTab) {
       case "general":
         return {
@@ -333,21 +324,6 @@ export default function Settings() {
           type: "item",
           itemId: getIntegrationProviderCheckboxFocusId("real-debrid"),
         };
-      case "compatibility":
-        return {
-          type: "item",
-          itemId:
-            platform === "win32"
-              ? COMPATIBILITY_COMMON_REDIST_BUTTON_ID
-              : COMPATIBILITY_PROTON_OPTION_AUTO_FOCUS_ID,
-        };
-      case "account-privacy":
-        return userDetails
-          ? {
-              type: "item",
-              itemId: ACCOUNT_PRIVACY_PRIVACY_SELECT_ID,
-            }
-          : null;
       default:
         return null;
     }

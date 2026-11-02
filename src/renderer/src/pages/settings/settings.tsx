@@ -29,7 +29,6 @@ import { SettingsContextEmulation } from "./emulation/settings-context-emulation
 export default function Settings() {
   const { t } = useTranslation("settings");
 
-  const { userDetails } = useUserDetails();
   const { isFeatureEnabled, Feature } = useFeature();
   const isScreenshotsEnabled = isFeatureEnabled(Feature.Screenshots);
 

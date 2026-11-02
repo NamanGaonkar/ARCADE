@@ -5,7 +5,7 @@ import { findDownloadsForGame } from "@main/services/download-sources-storage";
 import { getSteamAppDetails } from "@main/services/steam";
 import { gamesShopCacheSublevel } from "@main/level";
 import { levelKeys } from "@main/level/sublevels/keys";
-import type { ShopAssets, CatalogueSearchResult } from "@types";
+import type { ShopAssets, CatalogueSearchResult, GameShop } from "@types";
 
 interface HydraApiCallPayload {
   method:
@@ -50,6 +50,19 @@ async function getSteamFeaturedCategories(): Promise<any> {
     return cachedCategories || {};
   }
 }
+
+const isNonGameItem = (item: any): boolean => {
+  if (!item || !item.name) return true;
+  const name = String(item.name).toLowerCase();
+  return (
+    item.type === "hardware" ||
+    name.includes("steam frame") ||
+    name.includes("steam controller") ||
+    name.includes("steam deck") ||
+    name.includes("valve index") ||
+    name.includes("steam link")
+  );
+};
 
 function mapSteamItemToShopAssets(item: any): ShopAssets {
   const objectId = String(item.id);
@@ -101,7 +114,7 @@ const hydraApiCall = async (
         categories.new_releases?.items || categories.coming_soon?.items || [];
     }
 
-    return rawItems.map(mapSteamItemToShopAssets);
+    return rawItems.filter((item) => !isNonGameItem(item)).map(mapSteamItemToShopAssets);
   }
 
   // Catalogue search
@@ -121,7 +134,9 @@ const hydraApiCall = async (
           }
         );
 
-        const items: any[] = searchRes.data?.items || [];
+        const items: any[] = (searchRes.data?.items || []).filter(
+          (item: any) => !isNonGameItem(item)
+        );
         const edges: CatalogueSearchResult[] = items.map((item) => ({
           id: String(item.id),
           objectId: String(item.id),
@@ -159,7 +174,7 @@ const hydraApiCall = async (
     for (const list of lists) {
       if (Array.isArray(list)) {
         for (const item of list) {
-          if (item?.id && !seen.has(item.id)) {
+          if (item?.id && !seen.has(item.id) && !isNonGameItem(item)) {
             seen.add(item.id);
             allItems.push(item);
           }
@@ -189,7 +204,7 @@ const hydraApiCall = async (
     /^\/games\/([^/]+)\/([^/]+)\/download-sources/
   );
   if (downloadSourcesMatch) {
-    const shop = downloadSourcesMatch[1];
+    const shop = downloadSourcesMatch[1] as GameShop;
     const objectId = downloadSourcesMatch[2];
 
     try {

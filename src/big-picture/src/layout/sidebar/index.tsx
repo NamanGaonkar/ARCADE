@@ -11,14 +11,13 @@ import {
   SquaresFourIcon,
   StarIcon,
 } from "@phosphor-icons/react";
-import { AuthPage, getDisplayedPlayTimeInMilliseconds } from "@shared";
+import { getDisplayedPlayTimeInMilliseconds } from "@shared";
 import {
   type FocusEvent,
   forwardRef,
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -28,7 +27,6 @@ import {
   Input,
   RouteAnchor,
   ScrollArea,
-  UserProfile,
   VerticalFocusGroup,
 } from "../../components";
 import { IS_DESKTOP } from "../../constants";
@@ -37,11 +35,9 @@ import {
   useBigPictureRunningGames,
   useNavigationActions,
   useSearch,
-  useUserDetails,
   useBigPictureToast,
 } from "../../hooks";
 import {
-  getGameHorizontalImageSource,
   getPreferredGameAssets,
   getItemFocusTarget,
   getBigPictureGameAchievementsPath,
@@ -62,8 +58,6 @@ import {
   BIG_PICTURE_SIDEBAR_LIBRARY_FILTER_RECENTLY_PLAYED_ID,
   BIG_PICTURE_SIDEBAR_LIBRARY_LIST_REGION_ID,
   BIG_PICTURE_SIDEBAR_LIBRARY_SEARCH_ID,
-  BIG_PICTURE_SIDEBAR_NOTIFICATIONS_ID,
-  BIG_PICTURE_SIDEBAR_PROFILE_ID,
   BIG_PICTURE_SIDEBAR_REGION_ID,
   BIG_PICTURE_CONTENT_REGION_ID,
   type BigPictureSidebarRouteKey,
@@ -82,7 +76,6 @@ import {
   useLibraryPendingAction,
 } from "../../components/pages/library";
 import { ConfirmationModal, DownloadGameModal } from "../../components/modals";
-import { SidebarNotificationsDropdown } from "./notifications-dropdown";
 import { PowerMenu } from "./power-menu";
 import "./styles.scss";
 
@@ -749,112 +742,6 @@ function SidebarLibrary({
   );
 }
 
-interface SidebarProfileProps {
-  library: LibraryGame[];
-  runningGamesById: SidebarRunningGamesById;
-  notificationsOpen: boolean;
-  notificationsFocusable: boolean;
-  onNotificationsOpenChange: (isOpen: boolean) => void;
-  onNotificationsRestoringFocusChange: (isRestoring: boolean) => void;
-}
-
-function SidebarProfile({
-  library,
-  runningGamesById,
-  notificationsOpen,
-  notificationsFocusable,
-  onNotificationsOpenChange,
-  onNotificationsRestoringFocusChange,
-}: Readonly<SidebarProfileProps>) {
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const { userDetails } = useUserDetails();
-  const notificationsButtonRef = useRef<HTMLButtonElement>(null);
-  const [notificationCount, setNotificationCount] = useState(0);
-  const contentEntryTarget =
-    getBigPictureContentSidebarReturnTargetFromPathname(pathname);
-  const runningGameBackgroundImageUrl = useMemo(() => {
-    const runningGameIds = Object.keys(runningGamesById);
-    const runningGame = library.find((game) =>
-      runningGameIds.includes(game.id)
-    );
-
-    if (!runningGame) return null;
-
-    return getGameHorizontalImageSource(runningGame) || null;
-  }, [library, runningGamesById]);
-
-  const toggleNotifications = useCallback(() => {
-    onNotificationsOpenChange(!notificationsOpen);
-  }, [notificationsOpen, onNotificationsOpenChange]);
-
-  const closeNotifications = useCallback(() => {
-    onNotificationsOpenChange(false);
-  }, [onNotificationsOpenChange]);
-  const handleProfileClick = useCallback(() => {
-    if (!userDetails?.id) {
-      void globalThis.window.electron.openAuthWindow(AuthPage.SignIn);
-      return;
-    }
-
-    const basePath = IS_DESKTOP ? "/big-picture" : "";
-    navigate(`${basePath}/profile/${userDetails.id}`);
-  }, [navigate, userDetails?.id]);
-
-  const profileFocusNavigationOverrides: FocusOverrides = {
-    up: {
-      type: "block",
-    },
-    ...(notificationsFocusable
-      ? {
-          right: getItemFocusTarget(BIG_PICTURE_SIDEBAR_NOTIFICATIONS_ID),
-        }
-      : {}),
-    down: getItemFocusTarget(BIG_PICTURE_SIDEBAR_ITEM_IDS.home),
-  };
-  const notificationsFocusNavigationOverrides: FocusOverrides = {
-    up: {
-      type: "block",
-    },
-    left: getItemFocusTarget(BIG_PICTURE_SIDEBAR_PROFILE_ID),
-    right: contentEntryTarget,
-    down: getItemFocusTarget(BIG_PICTURE_SIDEBAR_ITEM_IDS.home),
-  };
-
-  return (
-    <>
-      <div className="sidebar-profile">
-        <UserProfile
-          image={userDetails?.profileImageUrl}
-          backgroundImageUrl={runningGameBackgroundImageUrl}
-          name={userDetails?.displayName ?? "Sign in"}
-          friendCode={userDetails?.id ?? "Not signed in"}
-          profileFocusId={BIG_PICTURE_SIDEBAR_PROFILE_ID}
-          notificationsFocusId={BIG_PICTURE_SIDEBAR_NOTIFICATIONS_ID}
-          notificationsFocusable={notificationsFocusable}
-          profileFocusNavigationOverrides={profileFocusNavigationOverrides}
-          notificationsFocusNavigationOverrides={
-            notificationsFocusNavigationOverrides
-          }
-          notificationCount={notificationCount}
-          notificationsButtonRef={notificationsButtonRef}
-          onProfileClick={handleProfileClick}
-          onNotificationsClick={toggleNotifications}
-        />
-      </div>
-
-      <SidebarNotificationsDropdown
-        anchorRef={notificationsButtonRef}
-        visible={notificationsOpen}
-        onClose={closeNotifications}
-        onRestoringFocusChange={onNotificationsRestoringFocusChange}
-        onUnreadCountChange={setNotificationCount}
-        restoreFocusId={BIG_PICTURE_SIDEBAR_NOTIFICATIONS_ID}
-      />
-    </>
-  );
-}
-
 const SidebarContainer = forwardRef<
   HTMLDivElement,
   Readonly<{
@@ -932,8 +819,6 @@ function Sidebar() {
   const { showSuccessToast } = useBigPictureToast();
   const { currentFocusId, nodes, regions } = useNavigationSnapshot();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [restoringNotificationsFocus, setRestoringNotificationsFocus] =
-    useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [sidebarFocusWithin, setSidebarFocusWithin] = useState(false);
   const [contextMenuState, setContextMenuState] =
@@ -985,12 +870,11 @@ function Sidebar() {
     virtualKeyboardTarget?.dataset.sidebarLibrarySearch === "true";
   const sidebarForcedOpen =
     notificationsOpen ||
-    restoringNotificationsFocus ||
+    sidebarHovered ||
+    sidebarFocusWithin ||
     sidebarHasNavigationFocus ||
     contextMenuState.visible ||
     virtualKeyboardOnSidebarSearch;
-  const sidebarExpanded =
-    sidebarHovered || sidebarFocusWithin || sidebarForcedOpen;
 
   const handleOverlayPointerDown = () => {
     const activeElement = document.activeElement;

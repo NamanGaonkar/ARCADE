@@ -5,6 +5,26 @@ import icon from "@resources/icon.png?asset";
 import iconIco from "@resources/icon.ico?asset";
 
 const appIcon = process.platform === "win32" ? iconIco : icon;
+
+export function getResolvedAppIcon(): Electron.NativeImage {
+  try {
+    const pngPath = app.isPackaged
+      ? path.join(process.resourcesPath, "icon.png")
+      : path.join(__dirname, "../../resources/icon.png");
+    const img = nativeImage.createFromPath(pngPath);
+    if (!img.isEmpty()) return img;
+  } catch {}
+
+  try {
+    const icoPath = app.isPackaged
+      ? path.join(process.resourcesPath, "app-icon.ico")
+      : path.join(__dirname, "../../resources/icon.ico");
+    const img = nativeImage.createFromPath(icoPath);
+    if (!img.isEmpty()) return img;
+  } catch {}
+
+  return nativeImage.createFromPath(appIcon);
+}
 import trayIconDark from "@resources/tray-icon-dark.png?asset";
 import trayIcon from "@resources/tray-icon.png?asset";
 import {
@@ -340,6 +360,9 @@ export class WindowManager {
       this.initialConfigInitializationMainWindow
     );
     this.mainWindowInstance = mainWindow;
+    try {
+      mainWindow.setIcon(getResolvedAppIcon());
+    } catch {}
 
     this.deferredMainMaximize = false;
 
@@ -543,6 +566,10 @@ export class WindowManager {
         sandbox: false,
       },
     });
+
+    try {
+      this.bigPicture.setIcon(getResolvedAppIcon());
+    } catch {}
 
     this.bigPicture.removeMenu();
 

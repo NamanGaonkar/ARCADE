@@ -293,9 +293,34 @@ const getGameShopDetails = async (
             logger.error("Could not cache game details", err);
           });
 
+        const resolvedAssets: ShopAssets = cachedAssets ?? {
+          objectId,
+          shop: "steam",
+          title: result.name,
+          iconUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`,
+          libraryHeroImageUrl:
+            (result as any).background_raw ||
+            (result as any).background ||
+            `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_hero.jpg`,
+          libraryImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_600x900.jpg`,
+          logoImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/logo.png`,
+          coverImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`,
+          logoPosition: null,
+          downloadSources: [],
+        };
+
+        if (!cachedAssets) {
+          gamesShopAssetsSublevel
+            .put(levelKeys.game(shop, objectId), {
+              ...resolvedAssets,
+              updatedAt: Date.now(),
+            })
+            .catch(() => {});
+        }
+
         return {
           ...result,
-          assets: cachedAssets ?? null,
+          assets: resolvedAssets,
         };
       }
 
@@ -303,7 +328,24 @@ const getGameShopDetails = async (
     });
 
     const details = cachedData
-      ? { ...cachedData, assets: cachedAssets ?? null }
+      ? {
+          ...cachedData,
+          assets: cachedAssets ?? {
+            objectId,
+            shop: "steam" as const,
+            title: cachedData.name,
+            iconUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`,
+            libraryHeroImageUrl:
+              (cachedData as any).background_raw ||
+              (cachedData as any).background ||
+              `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_hero.jpg`,
+            libraryImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_600x900.jpg`,
+            logoImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/logo.png`,
+            coverImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`,
+            logoPosition: null,
+            downloadSources: [],
+          },
+        }
       : await appDetails;
 
     if (!details) return details;

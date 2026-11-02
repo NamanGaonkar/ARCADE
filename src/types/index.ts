@@ -594,6 +594,7 @@ export interface DownloadSourceDownload {
   uriGroups?: string[][];
   uploadDate: string;
   fileSize: string;
+  tags?: string[];
 }
 
 export interface GameStats {

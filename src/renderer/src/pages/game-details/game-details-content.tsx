@@ -235,11 +235,22 @@ export function GameDetailsContent() {
   const isLaunchboxGame = shop === "launchbox";
   const renderClassicsHero = isLaunchboxGame && !classicsUseHeroLayout;
 
+  const heroFallback =
+    shopDetails?.assets?.libraryHeroImageUrl ||
+    game?.libraryHeroImageUrl ||
+    (shopDetails as any)?.background_raw ||
+    (shopDetails as any)?.background ||
+    shopDetails?.screenshots?.[0]?.path_full ||
+    (shopDetails?.steam_appid
+      ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${shopDetails.steam_appid}/library_hero.jpg`
+      : "") ||
+    "";
+
   const heroImage = isCustomGame
     ? game?.libraryHeroImageUrl || game?.iconUrl || ""
     : getImageWithCustomPriority(
         (presentation ?? game)?.customHeroImageUrl,
-        shopDetails?.assets?.libraryHeroImageUrl
+        heroFallback
       );
 
   const launchboxCover = isLaunchboxGame

@@ -100,7 +100,7 @@ export function SettingsAppearance({
           createdAt: new Date(),
           updatedAt: new Date(),
         };
-        await levelDBService.set(preset.id, fullTheme, "themes");
+        await levelDBService.put(preset.id, fullTheme, "themes");
       }
       themesList = (await levelDBService.values("themes")) as Theme[];
     }
@@ -159,7 +159,7 @@ export function SettingsAppearance({
         visible={isImportThemeModalVisible}
         onClose={() => setIsImportThemeModalVisible(false)}
         onThemeImported={onThemeImported}
-        theme={importTheme?.theme || ""}
+        themeName={importTheme?.theme || ""}
         authorId={importTheme?.authorId || ""}
         authorName={importTheme?.authorName || ""}
       />

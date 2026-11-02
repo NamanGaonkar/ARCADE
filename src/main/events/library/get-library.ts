@@ -174,6 +174,30 @@ const getLibrary = async (
         ...composedAssets,
         shop: game.shop,
         objectId: game.objectId,
+        libraryImageUrl:
+          composedAssets?.libraryImageUrl ||
+          (game as any).libraryImageUrl ||
+          (game.shop === "steam"
+            ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.objectId}/library_600x900.jpg`
+            : null),
+        libraryHeroImageUrl:
+          composedAssets?.libraryHeroImageUrl ||
+          game.libraryHeroImageUrl ||
+          (game.shop === "steam"
+            ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.objectId}/library_hero.jpg`
+            : null),
+        logoImageUrl:
+          composedAssets?.logoImageUrl ||
+          game.logoImageUrl ||
+          (game.shop === "steam"
+            ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.objectId}/logo.png`
+            : null),
+        iconUrl:
+          composedAssets?.iconUrl ||
+          game.iconUrl ||
+          (game.shop === "steam"
+            ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.objectId}/header.jpg`
+            : null),
         unlockedAchievementCount,
         achievementCount,
         ...(game.shop === "epic" &&

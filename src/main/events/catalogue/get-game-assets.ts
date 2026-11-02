@@ -62,6 +62,28 @@ export const getGameAssets = async (
     return applyArtworkSelection(artworkKey, resolved);
   }
 
+  if (shop === "steam") {
+    const steamAssets: ShopAssets = {
+      objectId,
+      shop: "steam",
+      title: cachedAssets?.title || "",
+      iconUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`,
+      libraryHeroImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_hero.jpg`,
+      libraryImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/library_600x900.jpg`,
+      logoImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/logo.png`,
+      coverImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${objectId}/header.jpg`,
+      logoPosition: null,
+      downloadSources: [],
+    };
+
+    await gamesShopAssetsSublevel.put(gameKey, {
+      ...steamAssets,
+      updatedAt: Date.now(),
+    });
+
+    return applyArtworkSelection(artworkKey, steamAssets);
+  }
+
   return HydraApi.get<ShopAssets | null>(
     `/games/${shop}/${objectId}/assets`,
     null,
