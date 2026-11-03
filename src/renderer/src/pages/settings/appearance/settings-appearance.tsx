@@ -17,6 +17,34 @@ interface SettingsAppearanceProps {
 
 const BUILT_IN_THEMES: Array<Omit<Theme, "createdAt" | "updatedAt">> = [
   {
+    id: "builtin-arcadex-light",
+    name: "ArcadeX Signature Light (White & Black Accents)",
+    authorName: "ArcadeX",
+    isActive: false,
+    code: `/* ArcadeX Signature Light */
+:root {
+  --color-background-primary: #ffffff !important;
+  --color-background-secondary: #f8fafc !important;
+  --color-text-primary: #09090b !important;
+  --color-text-secondary: #52525b !important;
+  --color-border: #e4e4e7 !important;
+}
+.container__content { background: #ffffff !important; color: #09090b !important; }
+.sidebar { background-color: #f8fafc !important; border-right: 1px solid #e2e8f0 !important; }
+.sidebar__item-button { color: #0f172a !important; }
+.title-bar { background-color: #ffffff !important; border-bottom: 1px solid #e2e8f0 !important; color: #0f172a !important; }
+.title-bar__title, .title-bar__button { color: #0f172a !important; }
+.button--primary { background: #000000 !important; border: 1px solid #000000 !important; color: #ffffff !important; font-weight: 600 !important; }
+.button--primary:hover { background: #27272a !important; border-color: #27272a !important; color: #ffffff !important; }
+.button--outline { background: #ffffff !important; border: 1.5px solid #000000 !important; color: #000000 !important; font-weight: 600 !important; }
+.button--outline:hover { background: #f4f4f5 !important; color: #000000 !important; }
+.button--dark { background: #f4f4f5 !important; border: 1px solid #e4e4e7 !important; color: #09090b !important; }
+.badge { background-color: #000000 !important; color: #ffffff !important; }
+.badge--outline { background-color: transparent !important; color: #000000 !important; border: 1px solid #000000 !important; }
+.game-item { background-color: #f8fafc !important; border: 1px solid #e2e8f0 !important; }
+.game-item__title { color: #09090b !important; }`,
+  },
+  {
     id: "builtin-arcadex-oled",
     name: "Arcade Midnight OLED",
     authorName: "ArcadeX",

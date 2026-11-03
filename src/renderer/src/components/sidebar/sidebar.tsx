@@ -36,7 +36,6 @@ import type { SortOption } from "@renderer/pages/library/filter-options";
 import {
   CheckCircleFillIcon,
   CheckCircleIcon,
-  VideoIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "@primer/octicons-react";
@@ -518,17 +517,6 @@ export function Sidebar() {
         maxWidth: isCollapsed ? 68 : sidebarWidth,
       }}
     >
-      {globalThis.window.electron.platform === "darwin" && (
-        <button
-          type="button"
-          className="sidebar__big-picture-darwin"
-          onClick={() => globalThis.window.electron.openBigPictureWindow()}
-        >
-          <VideoIcon size={14} />
-          {t("big_picture")}
-        </button>
-      )}
-
       <div className="sidebar__container">
         <div className="sidebar__content">
           <section className="sidebar__section">

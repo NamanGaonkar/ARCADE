@@ -336,36 +336,7 @@ const hydraApiCall = async (
     }> = [];
     const seen = new Set<string>();
 
-    // 1. Instant local database search across 15,700 repacks (<5ms)
-    try {
-      const localMatches = await findDownloadsForGame(query).catch(() => []);
-      for (const m of localMatches) {
-        const cleanTitle = m.title
-          .replace(/\[.*?\]/g, "")
-          .replace(/\(.*?\)/g, "")
-          .replace(/v[0-9]+(\.[0-9]+)*/gi, "")
-          .replace(
-            /\b(repack|fitgirl|dodi|steamrip|gog|multi\d+|dlc|bonus)\b/gi,
-            ""
-          )
-          .replace(/\s+/g, " ")
-          .trim();
-
-        const tLower = cleanTitle.toLowerCase();
-        if (cleanTitle && !seen.has(tLower)) {
-          seen.add(tLower);
-          suggestions.push({
-            title: cleanTitle,
-            objectId: m.id,
-            shop: "custom" as GameShop,
-            iconUrl: "",
-          });
-          if (suggestions.length >= 8) break;
-        }
-      }
-    } catch {}
-
-    // 2. Parallel Steam store search (short 3.5s timeout)
+    // 1. Parallel Steam store search first (returns official games with banners)
     try {
       const searchRes = await axios.get(
         `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(query)}&l=english&cc=US`,
@@ -374,7 +345,7 @@ const hydraApiCall = async (
             "User-Agent":
               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ArcadeX/1.0.4",
           },
-          timeout: 3500,
+          timeout: 4000,
         }
       );
 
@@ -392,11 +363,42 @@ const hydraApiCall = async (
             shop: "steam" as GameShop,
             iconUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${item.id}/header.jpg`,
           });
-          if (suggestions.length >= 10) break;
+          if (suggestions.length >= 8) break;
         }
       }
     } catch (err) {
       logger.info("[hydraApiCall] Storesearch timeout or fallback to local");
+    }
+
+    // 2. Supplement with clean local matches only if needed
+    if (suggestions.length < 8) {
+      try {
+        const localMatches = await findDownloadsForGame(query).catch(() => []);
+        for (const m of localMatches) {
+          const cleanTitle = m.title
+            .replace(/\[.*?\]/g, "")
+            .replace(/\(.*?\)/g, "")
+            .replace(/v[0-9]+(\.[0-9]+)*/gi, "")
+            .replace(
+              /\b(repack|fitgirl|dodi|steamrip|gog|multi\d+|dlc|bonus)\b/gi,
+              ""
+            )
+            .replace(/\s+/g, " ")
+            .trim();
+
+          const tLower = cleanTitle.toLowerCase();
+          if (cleanTitle && !seen.has(tLower)) {
+            seen.add(tLower);
+            suggestions.push({
+              title: cleanTitle,
+              objectId: m.id,
+              shop: "custom" as GameShop,
+              iconUrl: null,
+            });
+            if (suggestions.length >= 8) break;
+          }
+        }
+      } catch {}
     }
 
     return suggestions.slice(0, 10);
@@ -508,7 +510,28 @@ const hydraApiCall = async (
 
     const skip = Number(payload.data?.skip || payload.params?.skip || 0);
     const take = Number(payload.data?.take || payload.params?.take || 30);
-    const sort = String(payload.data?.sort || payload.params?.sort || "popularity:desc");
+    const sortBy = payload.data?.sortBy || payload.params?.sortBy || "";
+    const sortOrder = payload.data?.sortOrder || payload.params?.sortOrder || "desc";
+    const sort = String(
+      payload.data?.sort ||
+      payload.params?.sort ||
+      (sortBy ? `${sortBy}:${sortOrder}` : "popularity:desc")
+    );
+
+    const sortEdges = (list: CatalogueSearchResult[]) => {
+      if (sort === "alphabetical:asc" || (sortBy === "alphabetical" && sortOrder === "asc")) {
+        list.sort((a, b) => a.title.localeCompare(b.title));
+      } else if (sort === "alphabetical:desc" || (sortBy === "alphabetical" && sortOrder === "desc")) {
+        list.sort((a, b) => b.title.localeCompare(a.title));
+      } else if (sort.startsWith("releaseDate:desc") || (sortBy === "releaseDate" && sortOrder === "desc")) {
+        list.sort((a, b) => (b.releaseYear || 0) - (a.releaseYear || 0));
+      } else if (sort.startsWith("releaseDate:asc") || (sortBy === "releaseDate" && sortOrder === "asc")) {
+        list.sort((a, b) => (a.releaseYear || 9999) - (b.releaseYear || 9999));
+      } else {
+        // Default / Popularity: Sort games with verified download sources to top
+        list.sort((a, b) => (b.downloadSources?.length || 0) - (a.downloadSources?.length || 0));
+      }
+    };
 
     // Handling Classics Mode (ROMs)
     if (isClassics) {
@@ -620,40 +643,36 @@ const hydraApiCall = async (
           }
         }
 
-        // 2. Add local repack matches if not already present
-        for (const m of localMatches) {
-          const tLower = m.title.toLowerCase().trim();
-          if (!seen.has(tLower)) {
-            seen.add(tLower);
-            const sourceLabel =
-              (m as any).repacker ||
-              (m as any).sourceName ||
-              (m as any).downloadSourceName ||
-              "Verified Repack";
-            const cleanSourceLabel = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(sourceLabel)
-              ? "Community Repack"
-              : sourceLabel;
-            edges.push({
-              id: m.id,
-              objectId: m.id,
-              title: m.title,
-              shop: "custom",
-              genres: resolveSmartGenres(m.title),
-              releaseYear: null,
-              libraryImageUrl: "",
-              downloadSources: [cleanSourceLabel],
-            });
+        // 2. Only if Steam returned no games, supplement with local matches with valid artwork
+        if (edges.length === 0) {
+          for (const m of localMatches.slice(0, 20)) {
+            const tLower = m.title.toLowerCase().trim();
+            if (!seen.has(tLower)) {
+              seen.add(tLower);
+              const lb = await LizardByteDBService.fetchGameByTitle(m.title).catch(() => null);
+              const sourceLabel =
+                (m as any).repacker ||
+                (m as any).sourceName ||
+                (m as any).downloadSourceName ||
+                "Verified Repack";
+              const cleanSourceLabel = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(sourceLabel)
+                ? "Community Repack"
+                : sourceLabel;
+              edges.push({
+                id: m.id,
+                objectId: m.id,
+                title: m.title,
+                shop: "custom",
+                genres: resolveSmartGenres(m.title, lb?.genres),
+                releaseYear: lb?.releaseDate ? new Date(lb.releaseDate).getFullYear() : null,
+                libraryImageUrl: lb?.coverUrl || "",
+                downloadSources: [cleanSourceLabel],
+              });
+            }
           }
         }
 
-        if (sort === "alphabetical:asc") {
-          edges.sort((a, b) => a.title.localeCompare(b.title));
-        } else if (sort === "alphabetical:desc") {
-          edges.sort((a, b) => b.title.localeCompare(a.title));
-        } else {
-          // Sort games with download sources to the top
-          edges.sort((a, b) => (b.downloadSources?.length || 0) - (a.downloadSources?.length || 0));
-        }
+        sortEdges(edges);
 
         return {
           edges: edges.slice(skip, skip + take),
@@ -714,21 +733,10 @@ const hydraApiCall = async (
       })
     );
 
-    if (sort === "alphabetical:asc") {
-      edges.sort((a, b) => a.title.localeCompare(b.title));
-    } else if (sort === "alphabetical:desc") {
-      edges.sort((a, b) => b.title.localeCompare(a.title));
-    } else {
-      edges.sort((a, b) => (b.downloadSources?.length || 0) - (a.downloadSources?.length || 0));
-    }
+    sortEdges(edges);
 
     return {
       edges: edges.slice(skip, skip + take),
-      count: edges.length,
-    };
-
-    return {
-      edges,
       count: edges.length,
     };
   }

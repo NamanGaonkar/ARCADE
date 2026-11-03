@@ -10,6 +10,7 @@ import {
 import updater from "electron-updater";
 import i18n from "i18next";
 import path from "node:path";
+import fs from "node:fs";
 import url from "node:url";
 import { electronApp, optimizer } from "@electron-toolkit/utils";
 import {
@@ -91,6 +92,8 @@ i18n.init({
   },
 });
 
+app.setName("ArcadeX");
+
 const PROTOCOLS = ["arcadex", "hydralauncher", "hydra"];
 
 // Register the custom schemes as privileged so the renderer can fetch them
@@ -126,9 +129,11 @@ const initializeApp = async () => {
   if (process.platform === "win32") {
     try {
       const { exec } = await import("node:child_process");
+      const installedExe = path.join(process.env.LOCALAPPDATA || "", "Programs", "ArcadeX", "ArcadeX.exe");
+      const targetExe = fs.existsSync(installedExe) ? installedExe : process.execPath;
       for (const scheme of PROTOCOLS) {
         exec(
-          `reg add "HKCU\\Software\\Classes\\${scheme}" /ve /d "ArcadeX Protocol" /f`
+          `reg add "HKCU\\Software\\Classes\\${scheme}" /ve /d "URL:ArcadeX Protocol" /f`
         );
         exec(
           `reg add "HKCU\\Software\\Classes\\${scheme}" /v "URL Protocol" /d "" /f`
@@ -137,9 +142,15 @@ const initializeApp = async () => {
           `reg add "HKCU\\Software\\Classes\\${scheme}" /v "FriendlyTypeName" /d "ArcadeX" /f`
         );
         exec(
-          `reg add "HKCU\\Software\\Classes\\${scheme}\\shell\\open\\command" /ve /d "\\"${process.execPath}\\" \\"%1\\"" /f`
+          `reg add "HKCU\\Software\\Classes\\${scheme}\\DefaultIcon" /ve /d "\\"${targetExe}\\",0" /f`
+        );
+        exec(
+          `reg add "HKCU\\Software\\Classes\\${scheme}\\shell\\open\\command" /ve /d "\\"${targetExe}\\" \\"%1\\"" /f`
         );
       }
+      exec(
+        `reg add "HKCU\\Software\\Classes\\Applications\\ArcadeX.exe" /v "FriendlyAppName" /d "ArcadeX" /f`
+      );
     } catch {}
   }
 

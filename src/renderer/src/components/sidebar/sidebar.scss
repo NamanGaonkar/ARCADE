@@ -5,6 +5,8 @@
   color: globals.$muted-color;
   flex-direction: column;
   display: flex;
+  flex-shrink: 0;
+  z-index: 20;
   transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.25s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity ease 0.2s;
   border-right: solid 1px globals.$border-color;
   position: relative;
@@ -12,27 +14,37 @@
   padding-top: globals.$spacing-unit;
 
   &--collapsed {
+    width: 68px !important;
+    min-width: 68px !important;
+    max-width: 68px !important;
+    overflow: hidden !important;
     padding-top: globals.$spacing-unit;
 
     .sidebar__menu-item-button {
       justify-content: center;
       padding: 10px 0;
+      width: 100% !important;
 
-      span {
-        display: none;
+      span, label, p {
+        display: none !important;
       }
     }
 
     .sidebar__section--games {
-      display: none;
+      display: none !important;
     }
 
     .sidebar__content {
       padding: 0 8px;
+      overflow: hidden !important;
+    }
+
+    .sidebar__collapse-button span {
+      display: none !important;
     }
 
     .sidebar__handle {
-      display: none;
+      display: none !important;
     }
   }
 

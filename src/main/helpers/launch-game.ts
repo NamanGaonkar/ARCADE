@@ -754,6 +754,7 @@ const launchGameWithCloudSaveChecks = async (
     ? await updateGameRecord(gameKey, (currentGame) => ({
         ...updateGameExecutablePath(currentGame, parsedPath),
         launchOptions,
+        lastTimePlayed: new Date(),
         ...(steamCompatibilityPrefixPath
           ? { winePrefixPath: steamCompatibilityPrefixPath }
           : {}),

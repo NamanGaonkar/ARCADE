@@ -153,6 +153,8 @@
 
     &--open {
       max-height: 280px;
+      overflow-y: auto;
+      padding: 12px;
     }
   }
 

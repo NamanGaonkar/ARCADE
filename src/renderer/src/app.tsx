@@ -1,5 +1,4 @@
 import { BottomPanel, Header, Sidebar, Toast } from "@renderer/components";
-import { VideoIcon } from "@primer/octicons-react";
 import {
   DashIcon,
   ScreenFullIcon,
@@ -566,15 +565,6 @@ export function App() {
           }`}
         >
           <h4>ArcadeX</h4>
-
-          <button
-            type="button"
-            className="title-bar__big-picture"
-            onClick={() => globalThis.window.electron.openBigPictureWindow()}
-          >
-            <VideoIcon size={14} />
-            {t("big_picture", { ns: "sidebar" })}
-          </button>
 
           {window.electron.platform === "linux" && (
             <div className="title-bar__window-controls">

@@ -361,11 +361,19 @@ export const seedDownloadSources = async (
 };
 
 const normalizeTitle = (title: string): string => {
-  return title
+  if (!title) return "";
+  let cleaned = title;
+  // Clean release tags without wiping actual game titles
+  cleaned = cleaned.replace(/\[(fitgirl|dodi|repack|steamrip|gog|onlinefix|scene|p2p|rune|tenoke|elamigos|xatab)[^\]]*\]/gi, " ");
+  cleaned = cleaned.replace(/\((fitgirl|dodi|repack|steamrip|gog|onlinefix|scene|p2p|rune|tenoke|elamigos|xatab)[^)]*\)/gi, " ");
+  // If the whole title is wrapped in outer brackets like [ECHOSTASIS], unwrap outer brackets
+  cleaned = cleaned.replace(/^\[(.*?)\]$/, "$1");
+  cleaned = cleaned.replace(/^\((.*?)\)$/, "$1");
+  return cleaned
     .toLowerCase()
+    .normalize("NFKD")
     .replace(/[®™©:]/g, " ")
-    .replace(/\[.*?\]|\(.*?\)|<.*?>/g, " ")
-    .replace(/[^a-z0-9]/g, " ")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
 };
@@ -376,10 +384,12 @@ export const findDownloadsForGame = async (
   if (!gameTitle) return [];
 
   const normalizedGameTitle = normalizeTitle(gameTitle);
-  if (!normalizedGameTitle) return [];
+  if (!normalizedGameTitle || normalizedGameTitle.length < 2) return [];
 
   const results: GameRepack[] = [];
-  const queryTokens = normalizedGameTitle.split(" ").filter((t) => t.length > 2);
+  const queryTokens = normalizedGameTitle
+    .split(" ")
+    .filter((t) => t.length > 2);
 
   try {
     const dir = getSourcesDir();
@@ -388,6 +398,10 @@ export const findDownloadsForGame = async (
     for (const file of files) {
       if (!file.endsWith(".json")) continue;
       const sourceKey = file.replace(/\.json$/, "");
+      // Skip raw UUID orphan files
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sourceKey)) {
+        continue;
+      }
       const filePath = path.join(dir, file);
 
       let downloads = inMemoryDownloadsCache.get(sourceKey);
@@ -417,11 +431,11 @@ export const findDownloadsForGame = async (
       let displayName = sourceName;
       if (lowerKey.includes("fitgirl")) displayName = "FitGirl Repacks";
       else if (lowerKey.includes("dodi")) displayName = "DODI Repacks";
-      else if (lowerKey.includes("steamrip")) displayName = "SteamRip";
-      else if (lowerKey.includes("gog")) displayName = "GOG";
-      else if (lowerKey.includes("onlinefix")) displayName = "OnlineFix";
-      else if (lowerKey.includes("psx") || lowerKey.includes("xatab"))
-        displayName = "PSX Roms (Retro)";
+      else if (lowerKey.includes("steamrip")) displayName = "SteamRip [Direct Download]";
+      else if (lowerKey.includes("gog")) displayName = "GOG [DRM-Free]";
+      else if (lowerKey.includes("onlinefix")) displayName = "OnlineFix [Multiplayer]";
+      else if (lowerKey.includes("xatab")) displayName = "Xatab Repacks";
+      else if (lowerKey.includes("psx")) displayName = "PSX Roms (Retro)";
       else if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(displayName)) {
         displayName = "Community Repack";
       }
@@ -429,20 +443,23 @@ export const findDownloadsForGame = async (
       downloads.forEach((item, index) => {
         if (!item.title) return;
         const normalizedItemTitle = normalizeTitle(item.title);
+        if (!normalizedItemTitle || normalizedItemTitle.length < 2) return;
 
-        const isExactOrSubstring =
-          normalizedItemTitle === normalizedGameTitle ||
-          normalizedItemTitle.includes(normalizedGameTitle) ||
-          normalizedGameTitle.includes(normalizedItemTitle);
+        const isExact = normalizedItemTitle === normalizedGameTitle;
+        const isStartsWith = normalizedItemTitle.startsWith(normalizedGameTitle);
+        const itemContainsGame = normalizedItemTitle.includes(normalizedGameTitle);
 
         let isTokenMatch = false;
-        if (!isExactOrSubstring && queryTokens.length >= 2) {
+        if (queryTokens.length >= 2) {
           isTokenMatch = queryTokens.every((token) =>
             normalizedItemTitle.includes(token)
           );
+        } else if (queryTokens.length === 1 && queryTokens[0].length >= 4) {
+          isTokenMatch = normalizedItemTitle.includes(queryTokens[0]);
         }
 
-        if (isExactOrSubstring || isTokenMatch) {
+        // Must be exact, prefix, or contain game title. Never allow game title to match a random substring.
+        if (isExact || isStartsWith || itemContainsGame || isTokenMatch) {
           results.push({
             id: `${sourceKey}-${index}`,
             title: item.title,
@@ -460,6 +477,22 @@ export const findDownloadsForGame = async (
         }
       });
     }
+
+    // Sort: exact matches first, then trusted sources (FitGirl, DODI, SteamRip, GOG)
+    const trustedOrder = ["fitgirl", "dodi", "steamrip", "gog", "onlinefix"];
+    results.sort((a, b) => {
+      const aExact = normalizeTitle(a.title) === normalizedGameTitle ? 1 : 0;
+      const bExact = normalizeTitle(b.title) === normalizedGameTitle ? 1 : 0;
+      if (bExact !== aExact) return bExact - aExact;
+
+      const aSourceLower = (a.downloadSourceName || "").toLowerCase();
+      const bSourceLower = (b.downloadSourceName || "").toLowerCase();
+      const aRank = trustedOrder.findIndex((t) => aSourceLower.includes(t));
+      const bRank = trustedOrder.findIndex((t) => bSourceLower.includes(t));
+      const aScore = aRank === -1 ? 99 : aRank;
+      const bScore = bRank === -1 ? 99 : bRank;
+      return aScore - bScore;
+    });
   } catch (error) {
     logger.error("[DownloadSourcesStorage] Error searching downloads for game", error);
   }

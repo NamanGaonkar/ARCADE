@@ -43,10 +43,6 @@ const ProtonCompatibilitySection = lazy(async () => {
   return { default: mod.ProtonCompatibilitySection };
 });
 
-const ReleaseYearSection = lazy(async () => {
-  const mod = await import("./release-year-section");
-  return { default: mod.ReleaseYearSection };
-});
 
 const MIN_RELEASE_YEAR = 1970;
 
@@ -827,18 +823,6 @@ export default function Catalogue() {
               </Suspense>
             )}
 
-            {mode === "modern" && (
-              <Suspense fallback={null}>
-                <ReleaseYearSection
-                  title={t("release_year")}
-                  color={filterCategoryColors.releaseYear}
-                  value={filters.releaseYear}
-                  onChange={(value) =>
-                    dispatch(setFilters({ releaseYear: value }))
-                  }
-                />
-              </Suspense>
-            )}
 
             {mode === "modern" &&
               filterSections.map((section) => (

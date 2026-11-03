@@ -342,7 +342,7 @@ export class WindowManager {
     };
   }
 
-  public static async createMainWindow(options?: CreateMainWindowOptions) {
+  public static async createMainWindow(_options?: CreateMainWindowOptions) {
     if (this.mainWindow) return;
 
     const userPreferences = await db
@@ -377,8 +377,7 @@ export class WindowManager {
     mainWindow.on("maximize", emitMaximizeState);
     mainWindow.on("unmaximize", emitMaximizeState);
 
-    const shouldLaunchInBigPicture =
-      options?.forceBigPicture || Boolean(userPreferences?.launchInBigPicture);
+    const shouldLaunchInBigPicture = false;
 
     if (shouldLaunchInBigPicture) {
       mainWindow.setOpacity(0);

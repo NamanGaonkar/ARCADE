@@ -72,9 +72,7 @@ export function RepacksModal({
   const [repack, setRepack] = useState<GameRepack | null>(null);
   const [showSelectFolderModal, setShowSelectFolderModal] = useState(false);
   const [downloadSources, setDownloadSources] = useState<DownloadSource[]>([]);
-  const [selectedFingerprints, setSelectedFingerprints] = useState<string[]>(
-    []
-  );
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [filterTerm, setFilterTerm] = useState("");
 
   const [lastCheckTimestamp, setLastCheckTimestamp] = useState<string | null>(
@@ -132,6 +130,21 @@ export function RepacksModal({
 
     fetchDownloadSources();
   }, []);
+
+  const availableSources = useMemo(() => {
+    const names = new Set<string>();
+    for (const r of repacks) {
+      if (r.downloadSourceName && !/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(r.downloadSourceName)) {
+        names.add(r.downloadSourceName);
+      }
+    }
+    for (const src of downloadSources) {
+      if (src.name && !/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(src.name)) {
+        names.add(src.name);
+      }
+    }
+    return Array.from(names).sort();
+  }, [repacks, downloadSources]);
 
   useEffect(() => {
     const fetchLastCheckTimestamp = async () => {
@@ -211,23 +224,17 @@ export function RepacksModal({
     const byTerm = sortedRepacks.filter((repack) => {
       if (!term) return true;
       const lowerTitle = repack.title.toLowerCase();
-      const lowerRepacker = repack.downloadSourceName.toLowerCase();
+      const lowerRepacker = (repack.downloadSourceName || "").toLowerCase();
       return lowerTitle.includes(term) || lowerRepacker.includes(term);
     });
 
     const bySource = byTerm.filter((repack) => {
-      if (selectedFingerprints.length === 0) return true;
-
-      return downloadSources.some(
-        (src) =>
-          src.fingerprint &&
-          selectedFingerprints.includes(src.fingerprint) &&
-          src.name === repack.downloadSourceName
-      );
+      if (selectedSources.length === 0) return true;
+      return selectedSources.includes(repack.downloadSourceName);
     });
 
     setFilteredRepacks(bySource);
-  }, [sortedRepacks, filterTerm, selectedFingerprints, downloadSources]);
+  }, [sortedRepacks, filterTerm, selectedSources]);
 
   const handleRepackClick = (repack: GameRepack) => {
     setRepack(repack);
@@ -239,11 +246,11 @@ export function RepacksModal({
     setFilterTerm(event.target.value);
   };
 
-  const toggleFingerprint = (fingerprint: string) => {
-    setSelectedFingerprints((prev) =>
-      prev.includes(fingerprint)
-        ? prev.filter((f) => f !== fingerprint)
-        : [...prev, fingerprint]
+  const toggleSource = (sourceName: string) => {
+    setSelectedSources((prev) =>
+      prev.includes(sourceName)
+        ? prev.filter((s) => s !== sourceName)
+        : [...prev, sourceName]
     );
   };
 
@@ -283,14 +290,14 @@ export function RepacksModal({
   const showSteamOption =
     (canDownloadOnSteam(steamGame) ||
       (isSteamImportedGame(steamGame) && isNonSteamExecutable)) &&
-    selectedFingerprints.length === 0 &&
+    selectedSources.length === 0 &&
     (!steamOptionTerm ||
       "steam".includes(steamOptionTerm) ||
       (game?.title ?? "").toLowerCase().includes(steamOptionTerm));
   const showEpicOption =
     epicAvailable &&
     isEpicMemberInCurrentScope(epicGame, connection) &&
-    selectedFingerprints.length === 0 &&
+    selectedSources.length === 0 &&
     (!steamOptionTerm ||
       "epic games".includes(steamOptionTerm) ||
       (game?.title ?? "").toLowerCase().includes(steamOptionTerm));
@@ -305,7 +312,7 @@ export function RepacksModal({
   useEffect(() => {
     if (!visible) {
       setFilterTerm("");
-      setSelectedFingerprints([]);
+      setSelectedSources([]);
       setIsFilterDrawerOpen(false);
     }
   }, [visible]);
@@ -344,7 +351,7 @@ export function RepacksModal({
               value={filterTerm}
               onChange={handleFilter}
             />
-            {downloadSources.length > 0 && (
+            {availableSources.length > 0 && (
               <Button
                 type="button"
                 theme="outline"
@@ -352,6 +359,7 @@ export function RepacksModal({
                 className="repacks-modal__filter-toggle"
               >
                 {t("filter_by_source")}
+                {selectedSources.length > 0 && ` (${selectedSources.length})`}
                 {isFilterDrawerOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
               </Button>
             )}
@@ -361,32 +369,24 @@ export function RepacksModal({
             className={`repacks-modal__download-sources ${isFilterDrawerOpen ? "repacks-modal__download-sources--open" : ""}`}
           >
             <div className="repacks-modal__source-grid">
-              {downloadSources
-                .filter(
-                  (
-                    source
-                  ): source is DownloadSource & { fingerprint: string } =>
-                    source.fingerprint !== undefined
-                )
-                .map((source) => {
-                  const label = source.name || source.url;
-                  const truncatedLabel =
-                    label.length > 16 ? label.substring(0, 16) + "..." : label;
-                  return (
-                    <div
-                      key={source.fingerprint}
-                      className="repacks-modal__source-item"
-                    >
-                      <CheckboxField
-                        label={truncatedLabel}
-                        checked={selectedFingerprints.includes(
-                          source.fingerprint
-                        )}
-                        onChange={() => toggleFingerprint(source.fingerprint)}
-                      />
-                    </div>
-                  );
-                })}
+              {availableSources.map((sourceName) => {
+                const truncatedLabel =
+                  sourceName.length > 20
+                    ? sourceName.substring(0, 20) + "..."
+                    : sourceName;
+                return (
+                  <div
+                    key={sourceName}
+                    className="repacks-modal__source-item"
+                  >
+                    <CheckboxField
+                      label={truncatedLabel}
+                      checked={selectedSources.includes(sourceName)}
+                      onChange={() => toggleSource(sourceName)}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -470,6 +470,15 @@ export function RepacksModal({
                 const availabilityStatus = getRepackAvailabilityStatus(repack);
                 const tooltipId = `availability-orb-${repack.id}`;
 
+                const uris = Array.isArray(repack.uris) ? repack.uris : [];
+                const isDirectDownload =
+                  uris.some((u) => u.startsWith("http://") || u.startsWith("https://")) &&
+                  !uris.some((u) => u.includes(".torrent"));
+                const isP2P = uris.some((u) => u.startsWith("magnet:") || u.includes(".torrent"));
+                const isHighSpeed = /fitgirl|dodi|steamrip|gog/i.test(
+                  repack.downloadSourceName || ""
+                );
+
                 return (
                   <Button
                     key={repack.id}
@@ -495,9 +504,20 @@ export function RepacksModal({
                         )}
                     </p>
 
-                    {isLastDownloadedOption && (
-                      <Badge>{t("last_downloaded_option")}</Badge>
-                    )}
+                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                      {isLastDownloadedOption && (
+                        <Badge>{t("last_downloaded_option")}</Badge>
+                      )}
+                      {isHighSpeed && (
+                        <Badge>High Speed</Badge>
+                      )}
+                      {isDirectDownload && (
+                        <Badge>Direct Download</Badge>
+                      )}
+                      {isP2P && (
+                        <Badge>P2P Torrent</Badge>
+                      )}
+                    </div>
 
                     <p className="repacks-modal__repack-info">
                       {repack.fileSize} - {repack.downloadSourceName} -{" "}
