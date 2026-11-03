@@ -415,8 +415,9 @@ export const findDownloadsForGame = async (
   const results: GameRepack[] = [];
   const queryTokens = normalizedGameTitle
     .split(" ")
-    .filter((t) => t.length > 2);
+    .filter((t) => t.length > 2 || /\d/.test(t));
   const coreQueryTokens = queryTokens.filter((t) => !EDITION_STOP_WORDS.has(t));
+  const gameNumberTokens = queryTokens.filter((t) => /^\d+$/.test(t));
 
   try {
     const dir = getSourcesDir();
@@ -496,6 +497,13 @@ export const findDownloadsForGame = async (
           );
         } else if (coreQueryTokens.length === 1 && coreQueryTokens[0].length >= 4) {
           isCoreTokenMatch = normalizedItemTitle.includes(coreQueryTokens[0]);
+        }
+
+        // If game has distinct sequence numbers (e.g. 2, 3), avoid matching a predecessor without that number
+        if (gameNumberTokens.length > 0 && !isExact) {
+          const itemTokens = new Set(normalizedItemTitle.split(" "));
+          const hasMissingNumber = gameNumberTokens.some((num) => !itemTokens.has(num));
+          if (hasMissingNumber) return;
         }
 
         // Must be exact, prefix, or contain game title/tokens. Never allow game title to match a random unrelated repack.

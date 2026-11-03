@@ -38,7 +38,46 @@ body, #root, main, .container, .container__content {
   color: #09090b !important;
 }
 
-/* Force dark readable text everywhere */
+/* Header & Window Title Bar */
+.header {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #09090b !important;
+}
+.header__search {
+  background-color: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+.header__search-input {
+  color: #09090b !important;
+}
+.header__search-input::placeholder {
+  color: #94a3b8 !important;
+}
+.header__action-button {
+  color: #09090b !important;
+  border-color: #cbd5e1 !important;
+}
+.header__action-button:hover {
+  color: #000000 !important;
+  border-color: #94a3b8 !important;
+}
+.window-title-bar {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+.window-title-bar__title, .window-title-bar__control {
+  color: #09090b !important;
+}
+.window-title-bar__control:hover {
+  background-color: #f1f5f9 !important;
+}
+.window-title-bar__control--close:hover {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+/* General Dark Readable Text */
 p, span, h1, h2, h3, h4, h5, h6, label, a, strong, b {
   color: #09090b !important;
 }
@@ -63,17 +102,14 @@ p, span, h1, h2, h3, h4, h5, h6, label, a, strong, b {
   color: #64748b !important;
 }
 
-/* Title Bar */
-.title-bar {
-  background-color: #ffffff !important;
-  border-bottom: 1px solid #e2e8f0 !important;
-  color: #0f172a !important;
+/* Tooltips */
+div[role="tooltip"], .tooltip {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border-radius: 6px !important;
 }
-.title-bar__title, .title-bar__button {
-  color: #0f172a !important;
-}
-.title-bar__button:hover {
-  background-color: #f1f5f9 !important;
+div[role="tooltip"] *, .tooltip * {
+  color: #ffffff !important;
 }
 
 /* Text Inputs, Search, Select Fields */
@@ -145,56 +181,116 @@ input::placeholder, .text-field__input::placeholder {
   color: #000000 !important;
 }
 
-/* Home Page & Featured Carousel */
-.home, .home__content, .home__header, .home-billboard, .home-billboard__banner {
+/* Home Page & Billboard */
+.home, .home__content, .home__header {
   background-color: #ffffff !important;
   color: #09090b !important;
 }
 .home__title {
   color: #09090b !important;
 }
-.featured-carousel, .hero-panel {
-  background: #f8fafc !important;
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 12px !important;
-}
-.featured-carousel__side-list {
-  background: #f1f5f9 !important;
-  border-left: 1px solid #e2e8f0 !important;
-}
-.featured-carousel__item {
-  background: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
-}
-.featured-carousel__item:hover, .featured-carousel__item--active {
-  background: #e2e8f0 !important;
-  border-color: #000000 !important;
-}
-.featured-carousel__title, .hero-panel__title, .home-billboard__title {
-  color: #09090b !important;
-  font-weight: 800 !important;
-}
-.featured-carousel__description, .hero-panel__description, .home-billboard__description {
-  color: #475569 !important;
-}
 .home__buttons-list button {
-  background: #f1f5f9 !important;
+  background: #ffffff !important;
   color: #09090b !important;
   border: 1px solid #cbd5e1 !important;
 }
 .home__buttons-list button:hover, .home__buttons-list button--active {
   background: #000000 !important;
   color: #ffffff !important;
+  border-color: #000000 !important;
 }
 
-/* Trending & Featured Cards */
-.trending-games, .trending-games__item, .trending-games__card {
-  background-color: #ffffff !important;
+/* Hero panel inside billboard MUST keep white text over artwork overlay */
+.home-billboard__hero {
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+}
+.home-billboard__hero .home-billboard__title,
+.home-billboard__title {
+  color: #ffffff !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9) !important;
+}
+.home-billboard__hero .home-billboard__description,
+.home-billboard__description {
+  color: #e2e8f0 !important;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8) !important;
+}
+.home-billboard__pill-badge {
+  background: rgba(255, 255, 255, 0.22) !important;
+  border-color: rgba(255, 255, 255, 0.45) !important;
+  color: #ffffff !important;
+}
+.home-billboard__pill-badge * {
+  color: #ffffff !important;
+}
+.home-billboard__btn--primary {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1.5px solid #ffffff !important;
+}
+.home-billboard__btn--primary * {
+  color: #000000 !important;
+}
+.home-billboard__btn--secondary {
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+}
+.home-billboard__btn--secondary * {
+  color: #ffffff !important;
+}
+
+/* Billboard right sidebar */
+.home-billboard__item {
+  background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+.home-billboard__item:hover, .home-billboard__item--active {
+  background: #f1f5f9 !important;
+  border-color: #000000 !important;
+}
+.home-billboard__item-tag {
+  color: #64748b !important;
+}
+.home-billboard__item-title {
   color: #09090b !important;
 }
-.trending-games__title {
-  color: #09090b !important;
+.home-billboard__discover-btn {
+  background: #ffffff !important;
+  border: 1.5px solid #000000 !important;
+  color: #000000 !important;
+}
+.home-billboard__discover-btn:hover {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* Game Cards (Home Grid) - Keep white text over cover artwork gradient */
+.game-card {
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+.game-card:hover {
+  border-color: #000000 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+}
+.game-card__title, .game-card__title-container, .game-card__content {
+  color: #ffffff !important;
+}
+.game-card__title {
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9) !important;
+}
+.game-card__no-download-label {
+  color: #e2e8f0 !important;
+}
+.game-card__shop-icon {
+  color: #ffffff !important;
+}
+.game-card__download-options li {
+  background: rgba(0, 0, 0, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
 }
 
 /* Library & Category Filter */
@@ -233,21 +329,40 @@ input::placeholder, .text-field__input::placeholder {
   background-color: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 8px !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
 }
 .game-item:hover {
   border-color: #000000 !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1) !important;
+}
+.game-item__details {
+  background: #ffffff !important;
 }
 .game-item__title {
   color: #09090b !important;
   font-weight: 700 !important;
 }
 
-/* Theme Cards in Settings */
+/* Settings & Theme Cards */
+.settings, .settings__content, .settings__panel {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+}
+.settings__sidebar {
+  background-color: #f8fafc !important;
+  border-right: 1px solid #e2e8f0 !important;
+}
+.settings__sidebar-button {
+  color: #0f172a !important;
+}
+.settings__sidebar-button:hover, .settings__sidebar-button--active {
+  background-color: #e2e8f0 !important;
+  color: #000000 !important;
+}
 .theme-card {
   background-color: #ffffff !important;
-  border: 1px solid #cbd5e1 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
 }
 .theme-card--active {
   background-color: #f8fafc !important;
@@ -289,22 +404,6 @@ input::placeholder, .text-field__input::placeholder {
 .repacks-modal__download-sources {
   background-color: #f8fafc !important;
   border: 1px solid #e2e8f0 !important;
-}
-
-/* Settings */
-.settings__container, .settings__content, .settings__sidebar {
-  background-color: #ffffff !important;
-}
-.settings__sidebar {
-  background-color: #f8fafc !important;
-  border-right: 1px solid #e2e8f0 !important;
-}
-.settings__sidebar-item, .settings__sidebar-item--active {
-  color: #09090b !important;
-}
-.settings__sidebar-item--active {
-  background-color: #e2e8f0 !important;
-  font-weight: 700 !important;
 }
 
 /* Scrollbars */
