@@ -1,7 +1,7 @@
-import { TrashIcon, PlusIcon } from "@primer/octicons-react";
+import { PlusIcon } from "@primer/octicons-react";
 import { Button } from "@renderer/components/button/button";
 import { useTranslation } from "react-i18next";
-import { AddThemeModal, DeleteAllThemesModal } from "../index";
+import { AddThemeModal } from "../index";
 import "./theme-actions.scss";
 import { useState } from "react";
 
@@ -12,13 +12,10 @@ interface ThemeActionsProps {
 
 export const ThemeActions = ({
   onListUpdated,
-  themesCount,
 }: ThemeActionsProps) => {
   const { t } = useTranslation("settings");
 
   const [addThemeModalVisible, setAddThemeModalVisible] = useState(false);
-  const [deleteAllThemesModalVisible, setDeleteAllThemesModalVisible] =
-    useState(false);
 
   return (
     <>
@@ -28,25 +25,7 @@ export const ThemeActions = ({
         onThemeAdded={onListUpdated}
       />
 
-      <DeleteAllThemesModal
-        visible={deleteAllThemesModalVisible}
-        onClose={() => setDeleteAllThemesModalVisible(false)}
-        onThemesDeleted={onListUpdated}
-      />
-
       <div className="settings-appearance__actions">
-        <div className="settings-appearance__actions-left">
-          <Button
-            theme="danger"
-            className="settings-appearance__button"
-            onClick={() => setDeleteAllThemesModalVisible(true)}
-            disabled={themesCount < 1}
-          >
-            <TrashIcon />
-            {t("clear_themes")}
-          </Button>
-        </div>
-
         <div className="settings-appearance__actions-right">
           <Button
             theme="outline"

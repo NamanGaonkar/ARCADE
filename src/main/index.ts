@@ -133,7 +133,7 @@ const initializeApp = async () => {
       const targetExe = fs.existsSync(installedExe) ? installedExe : process.execPath;
       for (const scheme of PROTOCOLS) {
         exec(
-          `reg add "HKCU\\Software\\Classes\\${scheme}" /ve /d "URL:ArcadeX Protocol" /f`
+          `reg add "HKCU\\Software\\Classes\\${scheme}" /ve /d "ArcadeX" /f`
         );
         exec(
           `reg add "HKCU\\Software\\Classes\\${scheme}" /v "URL Protocol" /d "" /f`
@@ -142,14 +142,32 @@ const initializeApp = async () => {
           `reg add "HKCU\\Software\\Classes\\${scheme}" /v "FriendlyTypeName" /d "ArcadeX" /f`
         );
         exec(
+          `reg add "HKCU\\Software\\Classes\\${scheme}" /v "ApplicationName" /d "ArcadeX" /f`
+        );
+        exec(
           `reg add "HKCU\\Software\\Classes\\${scheme}\\DefaultIcon" /ve /d "\\"${targetExe}\\",0" /f`
         );
         exec(
           `reg add "HKCU\\Software\\Classes\\${scheme}\\shell\\open\\command" /ve /d "\\"${targetExe}\\" \\"%1\\"" /f`
         );
+        exec(
+          `reg add "HKCU\\Software\\Classes\\${scheme}\\Application" /v "ApplicationName" /d "ArcadeX" /f`
+        );
+        exec(
+          `reg add "HKCU\\Software\\Classes\\${scheme}\\Application" /v "ApplicationDescription" /d "ArcadeX Launcher" /f`
+        );
       }
       exec(
         `reg add "HKCU\\Software\\Classes\\Applications\\ArcadeX.exe" /v "FriendlyAppName" /d "ArcadeX" /f`
+      );
+      exec(
+        `reg add "HKCU\\Software\\Classes\\Applications\\ArcadeX.exe" /v "ApplicationName" /d "ArcadeX" /f`
+      );
+      exec(
+        `reg add "HKCU\\Software\\Classes\\Applications\\electron.exe" /v "FriendlyAppName" /d "ArcadeX" /f`
+      );
+      exec(
+        `reg add "HKCU\\Software\\Classes\\Applications\\electron.exe" /v "ApplicationName" /d "ArcadeX" /f`
       );
     } catch {}
   }

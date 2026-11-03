@@ -61,10 +61,6 @@ import {
   LIBRARY_PLATFORMS_STORAGE_KEY,
   LIBRARY_SOURCES_STORAGE_KEY,
 } from "@renderer/session-state";
-import {
-  ClassicsOnboardingModal,
-  hasDismissedClassicsOnboarding,
-} from "@renderer/components/classics-onboarding-modal/classics-onboarding-modal";
 import "./library.scss";
 
 const FAVORITES_COLLECTION_ID = "__favorites__";
@@ -214,9 +210,6 @@ export default function Library() {
 
   const effectiveCategory: LibraryCategory = category;
 
-  const [showClassicsOnboarding, setShowClassicsOnboarding] = useState(false);
-  const classicsOnboardingTriggeredRef = useRef(false);
-
   const gamesScrollRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [isGamesScrolled, setIsGamesScrolled] = useState(false);
@@ -270,16 +263,6 @@ export default function Library() {
     return () => ro.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (
-      effectiveCategory === "classics" &&
-      !classicsOnboardingTriggeredRef.current &&
-      !hasDismissedClassicsOnboarding()
-    ) {
-      classicsOnboardingTriggeredRef.current = true;
-      setShowClassicsOnboarding(true);
-    }
-  }, [effectiveCategory]);
 
   const handlePlatformsChange = useCallback((next: string[]) => {
     setSelectedPlatforms(next);
@@ -945,10 +928,6 @@ export default function Library() {
         onClose={() => setShowCreateCollectionModal(false)}
       />
 
-      <ClassicsOnboardingModal
-        visible={showClassicsOnboarding}
-        onClose={() => setShowClassicsOnboarding(false)}
-      />
     </section>
   );
 }

@@ -71,6 +71,9 @@ export const resolveStoredLibraryCategory = (
   if (value === LEGACY_STEAM_LIBRARY_CATEGORY) {
     return { category: "pc", sources: ["steam"] };
   }
+  if (value === "classics") {
+    return { category: "all", sources: null };
+  }
 
   return { category: isLibraryCategory(value) ? value : "all", sources: null };
 };

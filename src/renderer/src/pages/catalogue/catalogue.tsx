@@ -32,6 +32,7 @@ import { FilterSection } from "./filter-section";
 import { GameItem } from "./game-item";
 import { GameItemClassics } from "./game-item-classics";
 import { Pagination } from "./pagination";
+import { CategoryFilter } from "@renderer/pages/library/category-filter";
 
 const ProtonCompatibilitySection = lazy(async () => {
   const mod = await import("./proton-compatibility-section");
@@ -143,6 +144,7 @@ export default function Catalogue() {
 
   const [results, setResults] = useState<CatalogueSearchResult[]>([]);
   const [resultsMode, setResultsMode] = useState(mode);
+  const [catalogueCategory, setCatalogueCategory] = useState<"all" | "pc">("all");
 
   const [itemsCount, setItemsCount] = useState(0);
 
@@ -610,17 +612,25 @@ export default function Catalogue() {
     <div className="catalogue" ref={cataloguePageRef}>
       <div className="catalogue__header">
         <div className="catalogue__header-row">
-          <div className="catalogue__header-summary">
-            <span className="catalogue__result-count">
-              {t("result_count", {
-                resultCount: formatNumber(itemsCount),
-              })}
-            </span>
-            {selectedFiltersCount === 0 && (
-              <span className="catalogue__filters-hint">
-                {t("filters_sidebar_hint")}
+          <div className="catalogue__header-left">
+            <CategoryFilter
+              category={catalogueCategory}
+              onCategoryChange={(cat) =>
+                setCatalogueCategory(cat === "pc" ? "pc" : "all")
+              }
+            />
+            <div className="catalogue__header-summary">
+              <span className="catalogue__result-count">
+                {t("result_count", {
+                  resultCount: formatNumber(itemsCount),
+                })}
               </span>
-            )}
+              {selectedFiltersCount === 0 && (
+                <span className="catalogue__filters-hint">
+                  {t("filters_sidebar_hint")}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="catalogue__sort-inline">

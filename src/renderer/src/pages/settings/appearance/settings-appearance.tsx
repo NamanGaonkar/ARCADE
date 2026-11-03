@@ -145,6 +145,77 @@ input::placeholder, .text-field__input::placeholder {
   color: #000000 !important;
 }
 
+/* Home Page & Featured Carousel */
+.home, .home__content, .home__header, .home-billboard, .home-billboard__banner {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+}
+.home__title {
+  color: #09090b !important;
+}
+.featured-carousel, .hero-panel {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+}
+.featured-carousel__side-list {
+  background: #f1f5f9 !important;
+  border-left: 1px solid #e2e8f0 !important;
+}
+.featured-carousel__item {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+}
+.featured-carousel__item:hover, .featured-carousel__item--active {
+  background: #e2e8f0 !important;
+  border-color: #000000 !important;
+}
+.featured-carousel__title, .hero-panel__title, .home-billboard__title {
+  color: #09090b !important;
+  font-weight: 800 !important;
+}
+.featured-carousel__description, .hero-panel__description, .home-billboard__description {
+  color: #475569 !important;
+}
+.home__buttons-list button {
+  background: #f1f5f9 !important;
+  color: #09090b !important;
+  border: 1px solid #cbd5e1 !important;
+}
+.home__buttons-list button:hover, .home__buttons-list button--active {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* Trending & Featured Cards */
+.trending-games, .trending-games__item, .trending-games__card {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #09090b !important;
+}
+.trending-games__title {
+  color: #09090b !important;
+}
+
+/* Library & Category Filter */
+.library, .library__content, .library__games-scroll {
+  background-color: #ffffff !important;
+}
+.library-category-filter__container {
+  background-color: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+.library-category-filter__option {
+  color: #475569 !important;
+}
+.library-category-filter__option--active {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+.library-category-filter__option--active * {
+  color: #ffffff !important;
+}
+
 /* Catalogue & Game Items */
 .catalogue, .catalogue__content, .catalogue__filters-container {
   background-color: #ffffff !important;
@@ -171,6 +242,29 @@ input::placeholder, .text-field__input::placeholder {
 .game-item__title {
   color: #09090b !important;
   font-weight: 700 !important;
+}
+
+/* Theme Cards in Settings */
+.theme-card {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+}
+.theme-card--active {
+  background-color: #f8fafc !important;
+  border-color: #000000 !important;
+}
+.theme-card__header__title, .theme-card__title {
+  color: #09090b !important;
+  font-weight: 700 !important;
+}
+.theme-card__author, .theme-card__author__name {
+  color: #475569 !important;
+}
+
+/* Game Details */
+.game-details, .game-details__content {
+  background-color: #ffffff !important;
+  color: #09090b !important;
 }
 
 /* Modals & Dialogs */

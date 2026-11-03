@@ -366,17 +366,43 @@ const normalizeTitle = (title: string): string => {
   // Clean release tags without wiping actual game titles
   cleaned = cleaned.replace(/\[(fitgirl|dodi|repack|steamrip|gog|onlinefix|scene|p2p|rune|tenoke|elamigos|xatab)[^\]]*\]/gi, " ");
   cleaned = cleaned.replace(/\((fitgirl|dodi|repack|steamrip|gog|onlinefix|scene|p2p|rune|tenoke|elamigos|xatab)[^)]*\)/gi, " ");
+  // Strip trademark/copyright symbols and colons before Unicode normalization to prevent '™' -> 'TM' and '®' -> '(R)'
+  cleaned = cleaned.replace(/[®™©:]/g, " ");
   // If the whole title is wrapped in outer brackets like [ECHOSTASIS], unwrap outer brackets
   cleaned = cleaned.replace(/^\[(.*?)\]$/, "$1");
   cleaned = cleaned.replace(/^\((.*?)\)$/, "$1");
   return cleaned
     .toLowerCase()
     .normalize("NFKD")
-    .replace(/[®™©:]/g, " ")
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
 };
+
+const EDITION_STOP_WORDS = new Set([
+  "edition",
+  "goty",
+  "remastered",
+  "remaster",
+  "definitive",
+  "deluxe",
+  "enhanced",
+  "director",
+  "directors",
+  "cut",
+  "anniversary",
+  "complete",
+  "bundle",
+  "repack",
+  "steam",
+  "pc",
+  "digital",
+  "collection",
+  "anthology",
+  "trilogy",
+  "version",
+  "update"
+]);
 
 export const findDownloadsForGame = async (
   gameTitle: string
@@ -390,6 +416,7 @@ export const findDownloadsForGame = async (
   const queryTokens = normalizedGameTitle
     .split(" ")
     .filter((t) => t.length > 2);
+  const coreQueryTokens = queryTokens.filter((t) => !EDITION_STOP_WORDS.has(t));
 
   try {
     const dir = getSourcesDir();
@@ -448,6 +475,10 @@ export const findDownloadsForGame = async (
         const isExact = normalizedItemTitle === normalizedGameTitle;
         const isStartsWith = normalizedItemTitle.startsWith(normalizedGameTitle);
         const itemContainsGame = normalizedItemTitle.includes(normalizedGameTitle);
+        const gameContainsItem =
+          normalizedItemTitle.length >= 5 &&
+          (normalizedGameTitle.startsWith(normalizedItemTitle) ||
+            normalizedGameTitle.includes(normalizedItemTitle));
 
         let isTokenMatch = false;
         if (queryTokens.length >= 2) {
@@ -458,8 +489,17 @@ export const findDownloadsForGame = async (
           isTokenMatch = normalizedItemTitle.includes(queryTokens[0]);
         }
 
-        // Must be exact, prefix, or contain game title. Never allow game title to match a random substring.
-        if (isExact || isStartsWith || itemContainsGame || isTokenMatch) {
+        let isCoreTokenMatch = false;
+        if (coreQueryTokens.length >= 2) {
+          isCoreTokenMatch = coreQueryTokens.every((token) =>
+            normalizedItemTitle.includes(token)
+          );
+        } else if (coreQueryTokens.length === 1 && coreQueryTokens[0].length >= 4) {
+          isCoreTokenMatch = normalizedItemTitle.includes(coreQueryTokens[0]);
+        }
+
+        // Must be exact, prefix, or contain game title/tokens. Never allow game title to match a random unrelated repack.
+        if (isExact || isStartsWith || itemContainsGame || gameContainsItem || isTokenMatch || isCoreTokenMatch) {
           results.push({
             id: `${sourceKey}-${index}`,
             title: item.title,

@@ -1,12 +1,8 @@
-import { PencilIcon, TrashIcon } from "@primer/octicons-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@renderer/components/button/button";
 import type { Theme } from "@types";
 import "./theme-card.scss";
-import { useState } from "react";
-import { DeleteThemeModal } from "../modals/delete-theme-modal";
 import { injectCustomCss, removeCustomCss } from "@renderer/helpers";
-import { THEME_WEB_STORE_URL } from "@renderer/constants";
 import { levelDBService } from "@renderer/services/leveldb.service";
 
 interface ThemeCardProps {
@@ -16,8 +12,6 @@ interface ThemeCardProps {
 
 export const ThemeCard = ({ theme, onListUpdated }: ThemeCardProps) => {
   const { t } = useTranslation("settings");
-
-  const [deleteThemeModalVisible, setDeleteThemeModalVisible] = useState(false);
 
   const handleSetTheme = async () => {
     try {
@@ -63,20 +57,10 @@ export const ThemeCard = ({ theme, onListUpdated }: ThemeCardProps) => {
   };
 
   return (
-    <>
-      <DeleteThemeModal
-        visible={deleteThemeModalVisible}
-        onClose={() => setDeleteThemeModalVisible(false)}
-        onThemeDeleted={onListUpdated}
-        themeId={theme.id}
-        themeName={theme.name}
-        isActive={theme.isActive}
-      />
-
-      <div
-        className={`theme-card ${theme.isActive ? "theme-card--active" : ""}`}
-        key={theme.name}
-      >
+    <div
+      className={`theme-card ${theme.isActive ? "theme-card--active" : ""}`}
+      key={theme.name}
+    >
         <div className="theme-card__header">
           <div className="theme-card__header__title">{theme.name}</div>
         </div>
@@ -99,31 +83,7 @@ export const ThemeCard = ({ theme, onListUpdated }: ThemeCardProps) => {
               </Button>
             )}
           </div>
-
-          <div className="theme-card__actions__right">
-            <Button
-              className={
-                theme.code.startsWith(THEME_WEB_STORE_URL)
-                  ? "theme-card__actions__right--external"
-                  : ""
-              }
-              onClick={() => window.electron.openEditorWindow(theme.id)}
-              title={t("edit_theme")}
-              theme="outline"
-            >
-              <PencilIcon />
-            </Button>
-
-            <Button
-              onClick={() => setDeleteThemeModalVisible(true)}
-              title={t("delete_theme")}
-              theme="outline"
-            >
-              <TrashIcon />
-            </Button>
-          </div>
         </div>
       </div>
-    </>
   );
 };

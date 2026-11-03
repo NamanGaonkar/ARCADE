@@ -13,14 +13,13 @@ import {
   LinkIcon,
   PlayIcon,
 } from "@primer/octicons-react";
-import { Camera, Gamepad2 } from "lucide-react";
+import { Camera } from "lucide-react";
 import { SettingsContextGeneral } from "./settings-context-general";
 import { SettingsContextDownloads } from "./settings-context-downloads";
 import { SettingsContextDownloadSources } from "./settings-context-download-sources";
 import { SettingsContextNotifications } from "./settings-context-notifications";
 import { SettingsContextContentGameplay } from "./settings-context-content-gameplay";
 import { SettingsContextScreenshots } from "./settings-context-screenshots";
-import { SettingsContextEmulation } from "./emulation/settings-context-emulation";
 
 export default function Settings() {
   const { t } = useTranslation("settings");
@@ -64,12 +63,6 @@ export default function Settings() {
             },
           ]
         : []),
-      {
-        id: "emulation" as const,
-        label: t("emulation"),
-        icon: <Gamepad2 size={16} />,
-        group: "classics" as const,
-      },
     ],
     [t, isScreenshotsEnabled]
   );
@@ -106,10 +99,6 @@ export default function Settings() {
 
             if (selectedCategoryId === "screenshots") {
               return <SettingsContextScreenshots />;
-            }
-
-            if (selectedCategoryId === "emulation") {
-              return <SettingsContextEmulation />;
             }
 
             return <SettingsContextGeneral appearance={appearance} />;
@@ -162,9 +151,7 @@ export default function Settings() {
                 </aside>
 
                 <div className="settings__panel">
-                  {selectedCategoryId !== "emulation" && (
-                    <h2>{currentCategory.label}</h2>
-                  )}
+                  <h2>{currentCategory.label}</h2>
                   {renderCategory()}
                 </div>
               </div>

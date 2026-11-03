@@ -37,11 +37,6 @@ export function CategoryFilter({
       label: t("category_pc"),
       icon: <DeviceDesktopIcon size={14} />,
     },
-    {
-      value: "classics",
-      label: t("category_classics"),
-      icon: <ClassicsIcon size={16} />,
-    },
   ];
 
   return (

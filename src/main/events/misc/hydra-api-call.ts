@@ -750,14 +750,16 @@ const hydraApiCall = async (
     const objectId = downloadSourcesMatch[2];
 
     try {
-      let gameTitle = "";
+      let gameTitle = (payload.params?.title as string) || "";
 
-      const cached = await gamesShopCacheSublevel
-        .get(levelKeys.gameShopCacheItem(shop, objectId, "english"))
-        .catch(() => null);
+      if (!gameTitle) {
+        const cached = await gamesShopCacheSublevel
+          .get(levelKeys.gameShopCacheItem(shop, objectId, "english"))
+          .catch(() => null);
 
-      if (cached?.name) {
-        gameTitle = cached.name;
+        if (cached?.name) {
+          gameTitle = cached.name;
+        }
       }
 
       if (!gameTitle) {

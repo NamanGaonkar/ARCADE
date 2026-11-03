@@ -549,9 +549,13 @@ export function GameDetailsContextProvider({
         )) as DownloadSource[];
         const sources = orderBy(sourcesRaw, "createdAt", "desc");
 
+        const titleToSearch =
+          presentation?.title || shopDetails?.name || game?.title || gameTitle;
+
         const params = {
           take: 100,
           skip: 0,
+          title: titleToSearch,
           downloadSourceIds: sources.map((source) => source.id),
         };
 
