@@ -109,7 +109,10 @@ export function SettingsContextProvider({
   const [blockedUsers, setBlockedUsers] = useState<UserBlocks["blocks"]>([]);
 
   const [searchParams] = useSearchParams();
-  const defaultSourceUrl = searchParams.get("urls");
+  const defaultSourceUrl =
+    searchParams.get("urls") ||
+    searchParams.get("url") ||
+    searchParams.get("source");
   const defaultTab = searchParams.get("tab");
   const defaultAppearanceTheme = searchParams.get("theme");
   const defaultAppearanceAuthorId = searchParams.get("authorId");

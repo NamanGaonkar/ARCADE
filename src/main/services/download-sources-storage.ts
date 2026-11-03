@@ -422,6 +422,9 @@ export const findDownloadsForGame = async (
       else if (lowerKey.includes("onlinefix")) displayName = "OnlineFix";
       else if (lowerKey.includes("psx") || lowerKey.includes("xatab"))
         displayName = "PSX Roms (Retro)";
+      else if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(displayName)) {
+        displayName = "Community Repack";
+      }
 
       downloads.forEach((item, index) => {
         if (!item.title) return;
@@ -468,5 +471,15 @@ export const getMatchingSourceNamesForGame = async (
   gameTitle: string
 ): Promise<string[]> => {
   const repacks = await findDownloadsForGame(gameTitle);
-  return Array.from(new Set(repacks.map((r) => r.downloadSourceName)));
+  return Array.from(
+    new Set(
+      repacks
+        .map((r) => r.downloadSourceName)
+        .filter(
+          (name): name is string =>
+            Boolean(name) &&
+            !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(name)
+        )
+    )
+  );
 };

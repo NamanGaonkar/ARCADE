@@ -50,8 +50,10 @@ export function getGameImageSources(game: LibraryGame) {
 
 export function getGameLandscapeImageSources(game: LibraryGame) {
   return [
-    game.libraryImageUrl,
+    game.customHeroImageUrl,
+    game.libraryHeroImageUrl,
     game.coverImageUrl,
+    game.libraryImageUrl,
     game.customIconUrl,
     game.iconUrl,
   ]
@@ -65,6 +67,7 @@ export function getGameHorizontalImageSource(game: LibraryGame): string {
   const sources = [
     game.customHeroImageUrl,
     game.libraryHeroImageUrl,
+    game.coverImageUrl,
     game.libraryImageUrl,
     game.customIconUrl,
     game.iconUrl,
@@ -83,5 +86,10 @@ export function getGameCoverImageSource(game: GameCoverImageSource) {
 }
 
 export function getGameLandscapeImageSource(game: GameCoverImageSource) {
-  return game.libraryImageUrl ?? game.coverImageUrl ?? game.iconUrl;
+  return (
+    (game as any).libraryHeroImageUrl ??
+    game.coverImageUrl ??
+    game.libraryImageUrl ??
+    game.iconUrl
+  );
 }

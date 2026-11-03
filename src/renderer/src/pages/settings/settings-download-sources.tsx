@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Button, Badge } from "@renderer/components";
 import { useTranslation } from "react-i18next";
 import type { DownloadSource } from "@types";
-import { SyncIcon, CheckCircleIcon } from "@primer/octicons-react";
+import { SyncIcon, CheckCircleIcon, PlusCircleIcon } from "@primer/octicons-react";
 import { useAppDispatch, useToast } from "@renderer/hooks";
 import { useFormat } from "@renderer/hooks/use-format";
 import { DownloadSourceStatus } from "@shared";
 import { useNavigate } from "react-router-dom";
 import { setFilters, clearFilters } from "@renderer/features";
 import { levelDBService } from "@renderer/services/leveldb.service";
+import { settingsContext } from "@renderer/context";
+import { AddDownloadSourceModal } from "./add-download-source-modal";
 import { orderBy } from "lodash-es";
 import "./settings-download-sources.scss";
 import { logger } from "@renderer/logger";
@@ -17,6 +19,9 @@ export function SettingsDownloadSources() {
   const [downloadSources, setDownloadSources] = useState<DownloadSource[]>([]);
   const [hasLoadedDownloadSources, setHasLoadedDownloadSources] = useState(false);
   const [isSyncingDownloadSources, setIsSyncingDownloadSources] = useState(false);
+  const [showAddSourceModal, setShowAddSourceModal] = useState(false);
+
+  const { sourceUrl, clearSourceUrl } = useContext(settingsContext);
 
   const { t } = useTranslation("settings");
   const { showSuccessToast } = useToast();
@@ -56,6 +61,12 @@ export function SettingsDownloadSources() {
 
     fetchDownloadSources();
   }, []);
+
+  useEffect(() => {
+    if (sourceUrl) {
+      setShowAddSourceModal(true);
+    }
+  }, [sourceUrl]);
 
   useEffect(() => {
     const hasPendingOrMatchingSource = downloadSources.some(
@@ -123,9 +134,25 @@ export function SettingsDownloadSources() {
 
   return (
     <>
+      <AddDownloadSourceModal
+        visible={showAddSourceModal}
+        onClose={() => {
+          setShowAddSourceModal(false);
+          clearSourceUrl();
+        }}
+        onAddDownloadSource={async () => {
+          const sources = (await levelDBService.values(
+            "downloadSources"
+          )) as DownloadSource[];
+          const deduped = deduplicateSources(sources);
+          setDownloadSources(deduped);
+          showSuccessToast("Download source added successfully");
+        }}
+      />
+
       <div style={{ marginBottom: 16 }}>
         <p style={{ margin: "0 0 6px 0", fontSize: 14, color: "var(--color-text-subtle)" }}>
-          ArcadeX includes verified, pre-configured download catalogs (FitGirl, DODI, SteamRip, GOG, OnlineFix, and Retro ROMs) managed automatically by ArcadeX developers.
+          ArcadeX includes verified, pre-configured download catalogs (FitGirl, DODI, SteamRip, GOG, OnlineFix, and Retro ROMs) managed automatically by ArcadeX developers. You can also install custom catalogs from Hydra Library.
         </p>
       </div>
 
@@ -143,7 +170,17 @@ export function SettingsDownloadSources() {
           {t("sync_download_sources")}
         </Button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-text-subtle)", fontSize: 13 }}>
+        <Button
+          type="button"
+          theme="outline"
+          onClick={() => setShowAddSourceModal(true)}
+          disabled={isSyncingDownloadSources}
+        >
+          <PlusCircleIcon />
+          <span>Add Source</span>
+        </Button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-text-subtle)", fontSize: 13, marginLeft: "auto" }}>
           <CheckCircleIcon fill="#10b981" />
           <span>Managed Catalogs Active ({downloadSources.length})</span>
         </div>

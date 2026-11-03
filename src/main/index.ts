@@ -91,7 +91,7 @@ i18n.init({
   },
 });
 
-const PROTOCOL = "arcadex";
+const PROTOCOLS = ["arcadex", "hydralauncher", "hydra"];
 
 // Register the custom schemes as privileged so the renderer can fetch them
 // (supportFetchAPI) and use the results on a canvas without tainting it
@@ -107,19 +107,41 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
-if (process.defaultApp) {
-  if (process.argv.length >= 2) {
-    app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [
-      path.resolve(process.argv[1]),
-    ]);
+for (const scheme of PROTOCOLS) {
+  if (process.defaultApp) {
+    if (process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient(scheme, process.execPath, [
+        path.resolve(process.argv[1]),
+      ]);
+    }
+  } else {
+    app.setAsDefaultProtocolClient(scheme);
   }
-} else {
-  app.setAsDefaultProtocolClient(PROTOCOL);
 }
 
 const initializeApp = async () => {
   refreshPortableShortcutLauncher();
   electronApp.setAppUserModelId("gg.arcadex.launcher");
+
+  if (process.platform === "win32") {
+    try {
+      const { exec } = await import("node:child_process");
+      for (const scheme of PROTOCOLS) {
+        exec(
+          `reg add "HKCU\\Software\\Classes\\${scheme}" /ve /d "ArcadeX Protocol" /f`
+        );
+        exec(
+          `reg add "HKCU\\Software\\Classes\\${scheme}" /v "URL Protocol" /d "" /f`
+        );
+        exec(
+          `reg add "HKCU\\Software\\Classes\\${scheme}" /v "FriendlyTypeName" /d "ArcadeX" /f`
+        );
+        exec(
+          `reg add "HKCU\\Software\\Classes\\${scheme}\\shell\\open\\command" /ve /d "\\"${process.execPath}\\" \\"%1\\"" /f`
+        );
+      }
+    } catch {}
+  }
 
   logger.info("Crash dumps directory", app.getPath("crashDumps"));
 
@@ -228,7 +250,10 @@ const initializeApp = async () => {
 
   // Check if starting from a "run" deep link - don't show main window in that case
   const deepLinkArg = process.argv.find(
-    (arg) => arg.startsWith("arcadex://")
+    (arg) =>
+      arg.startsWith("arcadex://") ||
+      arg.startsWith("hydralauncher://") ||
+      arg.startsWith("hydra://")
   );
   const forceBigPicture = process.argv.includes("--big-picture");
 
@@ -352,8 +377,15 @@ const handleDeepLinkPath = (uri?: string) => {
       return;
     }
 
-    if (url.host === "install-source") {
-      WindowManager.redirect(`settings${url.search}`);
+    if (url.host === "install-source" || url.host === "install") {
+      const sourceUrl =
+        url.searchParams.get("urls") ||
+        url.searchParams.get("url") ||
+        url.searchParams.get("source") ||
+        "";
+      WindowManager.redirect(
+        `settings?tab=download_sources${sourceUrl ? `&urls=${encodeURIComponent(sourceUrl)}` : ""}`
+      );
       return;
     }
 
@@ -391,7 +423,10 @@ const handleDeepLinkPath = (uri?: string) => {
 
 app.on("second-instance", (_event, commandLine) => {
   const deepLink = commandLine.find(
-    (arg) => arg.startsWith("arcadex://")
+    (arg) =>
+      arg.startsWith("arcadex://") ||
+      arg.startsWith("hydralauncher://") ||
+      arg.startsWith("hydra://")
   );
   const forceBigPicture = commandLine.includes("--big-picture");
 

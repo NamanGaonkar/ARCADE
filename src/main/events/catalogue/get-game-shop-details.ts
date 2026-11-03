@@ -632,7 +632,92 @@ const getGameShopDetails = async (
     };
   }
 
-  throw new Error("Not implemented");
+  // Fallback for custom games, repacks, or any other shop
+  const storedGame = await gamesSublevel
+    .get(levelKeys.game(shop, objectId))
+    .catch(() => null);
+  const cachedAssets = await gamesShopAssetsSublevel
+    .get(levelKeys.game(shop, objectId))
+    .catch(() => null);
+
+  const title = storedGame?.title || cachedAssets?.title || objectId;
+  const [sgdb, lizardData] = await Promise.all([
+    SteamGridDBService.fetchArtwork(title, objectId).catch(() => null),
+    LizardByteDBService.fetchGameByTitle(title).catch(() => null),
+  ]);
+
+  const resolvedAssets: ShopAssets = {
+    objectId,
+    shop: shop as GameShop,
+    title: lizardData?.name || title,
+    iconUrl: sgdb?.iconUrl || lizardData?.coverUrl || null,
+    libraryHeroImageUrl:
+      sgdb?.libraryHeroImageUrl || lizardData?.heroUrl || null,
+    libraryImageUrl: sgdb?.libraryImageUrl || lizardData?.coverUrl || null,
+    logoImageUrl: sgdb?.logoImageUrl || null,
+    coverImageUrl:
+      sgdb?.coverImageUrl || lizardData?.heroUrl || lizardData?.coverUrl || null,
+    logoPosition: null,
+    downloadSources: [],
+  };
+
+  const description =
+    lizardData?.summary ||
+    lizardData?.storyline ||
+    `${title} is available on ArcadeX with complete launcher integration, high-speed repacks, and cloud save support.`;
+
+  const finalDetails = {
+    id: lizardData?.id || 0,
+    name: lizardData?.name || title,
+    short_description: description,
+    detailed_description: `<p>${description}</p>`,
+    about_the_game: `<p>${description}</p>`,
+    header_image: resolvedAssets.coverImageUrl || "",
+    background: resolvedAssets.libraryHeroImageUrl || "",
+    background_raw: resolvedAssets.libraryHeroImageUrl || "",
+    screenshots:
+      lizardData?.screenshotUrls?.map((url, i) => ({
+        id: i,
+        path_thumbnail: url,
+        path_full: url,
+      })) || [],
+    movies:
+      lizardData?.videos?.map((v, i) => ({
+        id: i,
+        name: v.title,
+        thumbnail: v.thumb || "",
+        webm: { 480: "", max: "" },
+        mp4: { 480: "", max: v.url },
+        highlight: true,
+      })) || [],
+    publishers: lizardData?.developers || [],
+    developers: lizardData?.developers || [],
+    genres: lizardData?.genres?.map((g, i) => ({
+      id: String(i),
+      description: g,
+    })) || [
+      { id: "0", description: "Action" },
+      { id: "1", description: "Adventure" },
+    ],
+    release_date: { date: lizardData?.releaseDate || "", coming_soon: false },
+    steam_appid: Number(objectId) || 0,
+    supported_languages: "English",
+    pc_requirements: { minimum: "", recommended: "" },
+    mac_requirements: { minimum: "", recommended: "" },
+    linux_requirements: { minimum: "", recommended: "" },
+    content_descriptors: { ids: [] },
+    assets: resolvedAssets,
+  };
+
+  return {
+    ...finalDetails,
+    assets: await applyArtworkToAssets(
+      shop,
+      objectId,
+      finalDetails.assets,
+      options?.artworkIdentity
+    ),
+  } as any;
 };
 
 registerEvent("getGameShopDetails", getGameShopDetails);

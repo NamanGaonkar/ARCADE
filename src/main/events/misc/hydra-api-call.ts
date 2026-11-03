@@ -104,11 +104,12 @@ async function mapSteamItemToShopAssets(item: any): Promise<ShopAssets> {
 
   if (lbDetails) {
     if (lbDetails.heroUrl) libraryHeroImageUrl = lbDetails.heroUrl;
-    if (lbDetails.coverUrl) {
-      libraryImageUrl = lbDetails.coverUrl;
-      coverImageUrl = lbDetails.coverUrl;
-    }
+    if (lbDetails.coverUrl) libraryImageUrl = lbDetails.coverUrl;
   }
+
+  const cleanSources = sources.filter(
+    (s) => !/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s)
+  );
 
   return {
     objectId,
@@ -120,8 +121,89 @@ async function mapSteamItemToShopAssets(item: any): Promise<ShopAssets> {
     logoImageUrl,
     coverImageUrl,
     logoPosition: null,
-    downloadSources: sources,
+    downloadSources: cleanSources,
   };
+}
+
+const KNOWN_STEAM_APP_IDS: Record<string, string> = {
+  "Cyberpunk 2077": "1091500",
+  "Grand Theft Auto V": "271590",
+  "Red Dead Redemption 2": "1174180",
+  "Elden Ring": "1245620",
+  "Baldur's Gate 3": "1086940",
+  "God of War": "1593500",
+  "The Witcher 3: Wild Hunt": "292030",
+  "Marvel's Spider-Man Remastered": "1817070",
+  "Hogwarts Legacy": "990080",
+  "Resident Evil 4": "2050650",
+  "Sekiro: Shadows Die Twice": "814380",
+  "Forza Horizon 5": "1551360",
+  "Fallout 4": "377160",
+  "The Last of Us Part I": "1888930",
+  "Monster Hunter: World": "582010",
+  "Horizon Zero Dawn": "1151640",
+  "Lies of P": "1627720",
+  "Palworld": "1623730",
+  "Hades II": "1145350",
+  "Alan Wake 2": "2140410",
+  "Starfield": "1716740",
+  "Days Gone": "1259420",
+  "Detroit: Become Human": "1222140",
+  "Dark Souls III": "374320",
+};
+
+function resolveSmartGenres(title: string, lbGenres?: string[]): string[] {
+  if (lbGenres && lbGenres.length > 0) return lbGenres;
+  const nameLower = (title || "").toLowerCase();
+  if (
+    nameLower.includes("cyberpunk") ||
+    nameLower.includes("sci-fi") ||
+    nameLower.includes("future")
+  ) {
+    return ["Action", "Sci-Fi", "RPG"];
+  }
+  if (
+    nameLower.includes("auto") ||
+    nameLower.includes("racing") ||
+    nameLower.includes("drive") ||
+    nameLower.includes("forza")
+  ) {
+    return ["Action", "Open World", "Racing"];
+  }
+  if (
+    nameLower.includes("red dead") ||
+    nameLower.includes("witcher") ||
+    nameLower.includes("ring") ||
+    nameLower.includes("souls") ||
+    nameLower.includes("rpg")
+  ) {
+    return ["Action", "RPG", "Open World"];
+  }
+  if (
+    nameLower.includes("resident evil") ||
+    nameLower.includes("silent hill") ||
+    nameLower.includes("horror") ||
+    nameLower.includes("dead")
+  ) {
+    return ["Action", "Horror", "Survival"];
+  }
+  if (
+    nameLower.includes("call of duty") ||
+    nameLower.includes("battlefield") ||
+    nameLower.includes("shooter") ||
+    nameLower.includes("war")
+  ) {
+    return ["Action", "FPS", "Multiplayer"];
+  }
+  if (
+    nameLower.includes("god of war") ||
+    nameLower.includes("blade") ||
+    nameLower.includes("spiderman") ||
+    nameLower.includes("spider-man")
+  ) {
+    return ["Action", "Adventure"];
+  }
+  return ["Action", "Adventure"];
 }
 
 const CURATED_FEATURED_TITLES = {
@@ -161,23 +243,57 @@ async function getCuratedShopAssets(titles: string[]): Promise<ShopAssets[]> {
   const results = await Promise.all(
     titles.map(async (title) => {
       try {
+        const steamId = KNOWN_STEAM_APP_IDS[title];
         const [lb, sources] = await Promise.all([
           LizardByteDBService.fetchGameByTitle(title).catch(() => null),
           getMatchingSourceNamesForGame(title).catch(() => []),
         ]);
 
-        const objectId = String(lb?.id ?? Math.abs(title.split("").reduce((a, b) => (a << 5) - a + b.charCodeAt(0), 0)));
+        const objectId =
+          steamId ||
+          String(
+            lb?.id ??
+              Math.abs(
+                title
+                  .split("")
+                  .reduce((a, b) => (a << 5) - a + b.charCodeAt(0), 0)
+              )
+          );
+
+        const cleanSources = sources.filter(
+          (s) => !/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s)
+        );
+
+        const heroArt = steamId
+          ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${steamId}/library_hero.jpg`
+          : lb?.heroUrl ||
+            lb?.artworkUrls?.[0] ||
+            lb?.screenshotUrls?.[0] ||
+            "";
+
+        const coverArt = steamId
+          ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${steamId}/header.jpg`
+          : lb?.heroUrl || lb?.artworkUrls?.[0] || heroArt;
+
+        const libraryArt = steamId
+          ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${steamId}/library_600x900.jpg`
+          : lb?.coverUrl || "";
+
+        const logoArt = steamId
+          ? `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${steamId}/logo.png`
+          : lb?.heroUrl || "";
+
         return {
           objectId,
           shop: "steam" as const,
           title: lb?.name || title,
-          iconUrl: lb?.coverUrl || "",
-          libraryHeroImageUrl: lb?.heroUrl || lb?.artworkUrls?.[0] || lb?.screenshotUrls?.[0] || "",
-          libraryImageUrl: lb?.coverUrl || "",
-          logoImageUrl: lb?.heroUrl || "",
-          coverImageUrl: lb?.coverUrl || "",
+          iconUrl: coverArt,
+          libraryHeroImageUrl: heroArt,
+          libraryImageUrl: libraryArt,
+          logoImageUrl: logoArt,
+          coverImageUrl: coverArt,
           logoPosition: null,
-          downloadSources: sources,
+          downloadSources: cleanSources,
         };
       } catch {
         return null;
@@ -224,11 +340,22 @@ const hydraApiCall = async (
     try {
       const localMatches = await findDownloadsForGame(query).catch(() => []);
       for (const m of localMatches) {
-        const tLower = m.title.toLowerCase();
-        if (!seen.has(tLower)) {
+        const cleanTitle = m.title
+          .replace(/\[.*?\]/g, "")
+          .replace(/\(.*?\)/g, "")
+          .replace(/v[0-9]+(\.[0-9]+)*/gi, "")
+          .replace(
+            /\b(repack|fitgirl|dodi|steamrip|gog|multi\d+|dlc|bonus)\b/gi,
+            ""
+          )
+          .replace(/\s+/g, " ")
+          .trim();
+
+        const tLower = cleanTitle.toLowerCase();
+        if (cleanTitle && !seen.has(tLower)) {
           seen.add(tLower);
           suggestions.push({
-            title: m.title,
+            title: cleanTitle,
             objectId: m.id,
             shop: "custom" as GameShop,
             iconUrl: "",
@@ -454,21 +581,42 @@ const hydraApiCall = async (
         const edges: CatalogueSearchResult[] = [];
 
         // 1. Add Steam matched items with verified download sources
-        for (const item of items) {
-          const tLower = item.name.toLowerCase().trim();
-          if (!seen.has(tLower)) {
-            seen.add(tLower);
-            const sources = await getMatchingSourceNamesForGame(item.name).catch(() => []);
-            edges.push({
+        const steamEdges = await Promise.all(
+          items.slice(0, 30).map(async (item) => {
+            const [sources, lb] = await Promise.all([
+              getMatchingSourceNamesForGame(item.name).catch(() => []),
+              LizardByteDBService.fetchGameByTitle(item.name).catch(() => null),
+            ]);
+
+            const cleanSources = sources.filter(
+              (s) => !/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s)
+            );
+
+            const genres = resolveSmartGenres(item.name, lb?.genres);
+            const releaseYear = lb?.releaseDate
+              ? new Date(lb.releaseDate).getFullYear()
+              : null;
+
+            return {
               id: String(item.id),
               objectId: String(item.id),
               title: item.name,
-              shop: "steam",
-              genres: [],
-              releaseYear: null,
-              libraryImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${item.id}/library_600x900.jpg`,
-              downloadSources: sources,
-            });
+              shop: "steam" as const,
+              genres,
+              releaseYear,
+              libraryImageUrl:
+                lb?.coverUrl ||
+                `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${item.id}/library_600x900.jpg`,
+              downloadSources: cleanSources,
+            };
+          })
+        );
+
+        for (const edge of steamEdges) {
+          const tLower = edge.title.toLowerCase().trim();
+          if (!seen.has(tLower)) {
+            seen.add(tLower);
+            edges.push(edge);
           }
         }
 
@@ -477,15 +625,23 @@ const hydraApiCall = async (
           const tLower = m.title.toLowerCase().trim();
           if (!seen.has(tLower)) {
             seen.add(tLower);
+            const sourceLabel =
+              (m as any).repacker ||
+              (m as any).sourceName ||
+              (m as any).downloadSourceName ||
+              "Verified Repack";
+            const cleanSourceLabel = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(sourceLabel)
+              ? "Community Repack"
+              : sourceLabel;
             edges.push({
               id: m.id,
               objectId: m.id,
               title: m.title,
               shop: "custom",
-              genres: [],
+              genres: resolveSmartGenres(m.title),
               releaseYear: null,
               libraryImageUrl: "",
-              downloadSources: [(m as any).repacker || (m as any).sourceName || "Verified Repack"],
+              downloadSources: [cleanSourceLabel],
             });
           }
         }
@@ -534,17 +690,26 @@ const hydraApiCall = async (
     }
 
     const edges: CatalogueSearchResult[] = await Promise.all(
-      allItems.map(async (item) => {
-        const sources = await getMatchingSourceNamesForGame(item.name).catch(() => []);
+      allItems.slice(0, 40).map(async (item) => {
+        const [sources, lb] = await Promise.all([
+          getMatchingSourceNamesForGame(item.name).catch(() => []),
+          LizardByteDBService.fetchGameByTitle(item.name).catch(() => null),
+        ]);
+        const cleanSources = sources.filter(
+          (s) => !/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s)
+        );
+        const genres = resolveSmartGenres(item.name, lb?.genres);
         return {
           id: String(item.id),
           objectId: String(item.id),
           title: item.name,
-          shop: "steam",
-          genres: [],
-          releaseYear: null,
-          libraryImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${item.id}/library_600x900.jpg`,
-          downloadSources: sources,
+          shop: "steam" as const,
+          genres,
+          releaseYear: lb?.releaseDate ? new Date(lb.releaseDate).getFullYear() : null,
+          libraryImageUrl:
+            lb?.coverUrl ||
+            `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${item.id}/library_600x900.jpg`,
+          downloadSources: cleanSources,
         };
       })
     );

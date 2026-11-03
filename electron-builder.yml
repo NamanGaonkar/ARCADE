@@ -1,5 +1,11 @@
 appId: gg.arcadex.launcher
 productName: ArcadeX
+protocols:
+  - name: ArcadeX
+    schemes:
+      - arcadex
+      - hydralauncher
+      - hydra
 beforePack: scripts/legendary-before-pack.cjs
 afterPack: scripts/legendary-after-pack.cjs
 afterSign: scripts/legendary-after-pack.cjs

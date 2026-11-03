@@ -240,17 +240,31 @@ export function Sidebar() {
   const visibleGames = useMemo(() => {
     if (isLibraryLoading) return [];
 
+    let baseList: LibraryGame[] = [];
     if (isSearching) {
       const normalizedQuery = removeDiacritics(filterQuery).toLowerCase();
-
-      return searchIndex
+      baseList = searchIndex
         .filter((entry) => entry.title.includes(normalizedQuery))
         .map((entry) => entry.game);
+    } else {
+      baseList = showPlayableOnly
+        ? sortedLibrary.filter(isGamePlayable)
+        : sortedLibrary;
     }
 
-    return showPlayableOnly
-      ? sortedLibrary.filter(isGamePlayable)
-      : sortedLibrary;
+    // Deduplicate games in sidebar list so identical titles only appear once
+    const seen = new Set<string>();
+    const deduped: LibraryGame[] = [];
+    for (const g of baseList) {
+      const key = `${g.shop}:${g.objectId}`;
+      const normTitle = (g.title || "").toLowerCase().trim();
+      if (!seen.has(key) && !seen.has(normTitle)) {
+        seen.add(key);
+        seen.add(normTitle);
+        deduped.push(g);
+      }
+    }
+    return deduped;
   }, [
     isLibraryLoading,
     isSearching,
