@@ -21,28 +21,208 @@ const BUILT_IN_THEMES: Array<Omit<Theme, "createdAt" | "updatedAt">> = [
     name: "ArcadeX Signature Light (White & Black Accents)",
     authorName: "ArcadeX",
     isActive: false,
-    code: `/* ArcadeX Signature Light */
+    code: `/* ArcadeX Signature Light - Fully Unified White & Black Accents */
 :root {
   --color-background-primary: #ffffff !important;
   --color-background-secondary: #f8fafc !important;
+  --color-background-tertiary: #f1f5f9 !important;
   --color-text-primary: #09090b !important;
-  --color-text-secondary: #52525b !important;
-  --color-border: #e4e4e7 !important;
+  --color-text-secondary: #475569 !important;
+  --color-text-muted: #64748b !important;
+  --color-border: #e2e8f0 !important;
 }
-.container__content { background: #ffffff !important; color: #09090b !important; }
-.sidebar { background-color: #f8fafc !important; border-right: 1px solid #e2e8f0 !important; }
-.sidebar__item-button { color: #0f172a !important; }
-.title-bar { background-color: #ffffff !important; border-bottom: 1px solid #e2e8f0 !important; color: #0f172a !important; }
-.title-bar__title, .title-bar__button { color: #0f172a !important; }
-.button--primary { background: #000000 !important; border: 1px solid #000000 !important; color: #ffffff !important; font-weight: 600 !important; }
-.button--primary:hover { background: #27272a !important; border-color: #27272a !important; color: #ffffff !important; }
-.button--outline { background: #ffffff !important; border: 1.5px solid #000000 !important; color: #000000 !important; font-weight: 600 !important; }
-.button--outline:hover { background: #f4f4f5 !important; color: #000000 !important; }
-.button--dark { background: #f4f4f5 !important; border: 1px solid #e4e4e7 !important; color: #09090b !important; }
-.badge { background-color: #000000 !important; color: #ffffff !important; }
-.badge--outline { background-color: transparent !important; color: #000000 !important; border: 1px solid #000000 !important; }
-.game-item { background-color: #f8fafc !important; border: 1px solid #e2e8f0 !important; }
-.game-item__title { color: #09090b !important; }`,
+
+/* Base Body & App Container */
+body, #root, main, .container, .container__content {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+}
+
+/* Force dark readable text everywhere */
+p, span, h1, h2, h3, h4, h5, h6, label, a, strong, b {
+  color: #09090b !important;
+}
+
+.text-muted, .catalogue__result-count, .catalogue__sort-label, .game-item__genres {
+  color: #64748b !important;
+}
+
+/* Sidebar */
+.sidebar {
+  background-color: #f8fafc !important;
+  border-right: 1px solid #e2e8f0 !important;
+}
+.sidebar__menu-item-button {
+  color: #0f172a !important;
+}
+.sidebar__menu-item-button:hover, .sidebar__menu-item-button--active {
+  background-color: #e2e8f0 !important;
+  color: #000000 !important;
+}
+.sidebar__collapse-button {
+  color: #64748b !important;
+}
+
+/* Title Bar */
+.title-bar {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+.title-bar__title, .title-bar__button {
+  color: #0f172a !important;
+}
+.title-bar__button:hover {
+  background-color: #f1f5f9 !important;
+}
+
+/* Text Inputs, Search, Select Fields */
+input, select, textarea, .text-field, .text-field__input, .search-bar, .select-field__select {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: none !important;
+}
+input::placeholder, .text-field__input::placeholder {
+  color: #94a3b8 !important;
+}
+.select-field__select option {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* Buttons */
+.button--primary {
+  background: #000000 !important;
+  border: 1.5px solid #000000 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+.button--primary * {
+  color: #ffffff !important;
+}
+.button--primary:hover {
+  background: #27272a !important;
+  border-color: #27272a !important;
+  color: #ffffff !important;
+}
+.button--outline {
+  background: #ffffff !important;
+  border: 1.5px solid #000000 !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+.button--outline * {
+  color: #000000 !important;
+}
+.button--outline:hover {
+  background: #f4f4f5 !important;
+}
+.button--dark {
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #09090b !important;
+}
+.button--dark * {
+  color: #09090b !important;
+}
+
+/* Badges */
+.badge {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+.badge * {
+  color: #ffffff !important;
+}
+.badge--outline {
+  background-color: transparent !important;
+  border: 1px solid #000000 !important;
+  color: #000000 !important;
+}
+.badge--outline * {
+  color: #000000 !important;
+}
+
+/* Catalogue & Game Items */
+.catalogue, .catalogue__content, .catalogue__filters-container {
+  background-color: #ffffff !important;
+}
+.catalogue__header {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+.catalogue__filters-sections {
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+}
+.game-item {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+.game-item:hover {
+  border-color: #000000 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+.game-item__title {
+  color: #09090b !important;
+  font-weight: 700 !important;
+}
+
+/* Modals & Dialogs */
+.modal, .modal__content, .repacks-modal, .download-settings-modal {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #09090b !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+.modal__title, .modal__description, .repacks-modal__repack-title {
+  color: #09090b !important;
+}
+.repacks-modal__repack-button {
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #09090b !important;
+}
+.repacks-modal__repack-button:hover {
+  border-color: #000000 !important;
+  background-color: #f1f5f9 !important;
+}
+.repacks-modal__download-sources {
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+/* Settings */
+.settings__container, .settings__content, .settings__sidebar {
+  background-color: #ffffff !important;
+}
+.settings__sidebar {
+  background-color: #f8fafc !important;
+  border-right: 1px solid #e2e8f0 !important;
+}
+.settings__sidebar-item, .settings__sidebar-item--active {
+  color: #09090b !important;
+}
+.settings__sidebar-item--active {
+  background-color: #e2e8f0 !important;
+  font-weight: 700 !important;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  background-color: #f8fafc !important;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1 !important;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8 !important;
+}`,
   },
   {
     id: "builtin-arcadex-oled",

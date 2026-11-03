@@ -26,17 +26,12 @@ import { debounce } from "lodash-es";
 import { useTranslation } from "react-i18next";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import cn from "classnames";
-import { CatalogueModeToggle } from "./catalogue-mode-toggle";
 import { getClassicsPlatformGroup } from "./classics-platform-group";
 import { FilterItem } from "./filter-item";
 import { FilterSection } from "./filter-section";
 import { GameItem } from "./game-item";
 import { GameItemClassics } from "./game-item-classics";
 import { Pagination } from "./pagination";
-import {
-  ClassicsOnboardingModal,
-  hasDismissedClassicsOnboarding,
-} from "@renderer/components/classics-onboarding-modal/classics-onboarding-modal";
 
 const ProtonCompatibilitySection = lazy(async () => {
   const mod = await import("./proton-compatibility-section");
@@ -150,20 +145,6 @@ export default function Catalogue() {
   const [resultsMode, setResultsMode] = useState(mode);
 
   const [itemsCount, setItemsCount] = useState(0);
-
-  const [showClassicsOnboarding, setShowClassicsOnboarding] = useState(false);
-  const classicsOnboardingTriggeredRef = useRef(false);
-
-  useEffect(() => {
-    if (
-      mode === "classics" &&
-      !classicsOnboardingTriggeredRef.current &&
-      !hasDismissedClassicsOnboarding()
-    ) {
-      classicsOnboardingTriggeredRef.current = true;
-      setShowClassicsOnboarding(true);
-    }
-  }, [mode]);
 
   const { formatNumber } = useFormat();
 
@@ -610,16 +591,6 @@ export default function Catalogue() {
         value: "alphabetical:desc",
         label: t("sort_title_desc"),
       },
-      {
-        key: "hydraScore:desc",
-        value: "hydraScore:desc",
-        label: t("sort_highest_rating"),
-      },
-      {
-        key: "hydraScore:asc",
-        value: "hydraScore:asc",
-        label: t("sort_lowest_rating"),
-      },
     ],
     [t]
   );
@@ -637,10 +608,6 @@ export default function Catalogue() {
 
   return (
     <div className="catalogue" ref={cataloguePageRef}>
-      <ClassicsOnboardingModal
-        visible={showClassicsOnboarding}
-        onClose={() => setShowClassicsOnboarding(false)}
-      />
       <div className="catalogue__header">
         <div className="catalogue__header-row">
           <div className="catalogue__header-summary">
@@ -778,8 +745,6 @@ export default function Catalogue() {
 
         <div className="catalogue__filters-container">
           <div className="catalogue__filters-sections">
-            <CatalogueModeToggle />
-
             {mode === "modern" && shouldShowProtonFeatures && (
               <Suspense fallback={null}>
                 <ProtonCompatibilitySection
