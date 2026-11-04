@@ -110,8 +110,17 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
+const installedArcadeXExe = path.join(
+  process.env.LOCALAPPDATA || "",
+  "Programs",
+  "ArcadeX",
+  "ArcadeX.exe"
+);
+
 for (const scheme of PROTOCOLS) {
-  if (process.defaultApp) {
+  if (fs.existsSync(installedArcadeXExe)) {
+    app.setAsDefaultProtocolClient(scheme, installedArcadeXExe, []);
+  } else if (process.defaultApp) {
     if (process.argv.length >= 2) {
       app.setAsDefaultProtocolClient(scheme, process.execPath, [
         path.resolve(process.argv[1]),

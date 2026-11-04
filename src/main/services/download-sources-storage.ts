@@ -409,14 +409,23 @@ export const findDownloadsForGame = async (
 ): Promise<GameRepack[]> => {
   if (!gameTitle) return [];
 
+  const cleanGameTitle = gameTitle.replace(/[\(（\[【].*?[\)）\]】]/g, "").trim();
+  const [rootPart] = cleanGameTitle.split(/[:\-—–|/]/);
+  const normalizedRootTitle = normalizeTitle(rootPart || gameTitle);
   const normalizedGameTitle = normalizeTitle(gameTitle);
   if (!normalizedGameTitle || normalizedGameTitle.length < 2) return [];
 
   const results: GameRepack[] = [];
+  const commonStopWords = new Set(["the", "a", "an", "of", "in", "and", "to", "for", "on", "at", "by", "with"]);
+
+  // Extract root tokens (e.g. "Crimson Desert Enhanced: Charting the Unknown" -> "crimson", "desert")
+  const rootTokens = (normalizedRootTitle || normalizedGameTitle)
+    .split(" ")
+    .filter((t) => t.length > 1 && !commonStopWords.has(t) && !EDITION_STOP_WORDS.has(t));
+
   const queryTokens = normalizedGameTitle
     .split(" ")
     .filter((t) => t.length > 2 || /\d/.test(t));
-  const coreQueryTokens = queryTokens.filter((t) => !EDITION_STOP_WORDS.has(t));
   const gameNumberTokens = queryTokens.filter((t) => /^\d+$/.test(t));
 
   try {
@@ -476,53 +485,57 @@ export const findDownloadsForGame = async (
         const isExact = normalizedItemTitle === normalizedGameTitle;
         const isStartsWith = normalizedItemTitle.startsWith(normalizedGameTitle);
         const itemContainsGame = normalizedItemTitle.includes(normalizedGameTitle);
-        const gameContainsItem =
-          normalizedItemTitle.length >= 5 &&
-          (normalizedGameTitle.startsWith(normalizedItemTitle) ||
-            normalizedGameTitle.includes(normalizedItemTitle));
 
-        let isTokenMatch = false;
-        if (queryTokens.length >= 2) {
-          isTokenMatch = queryTokens.every((token) =>
-            normalizedItemTitle.includes(token)
-          );
-        } else if (queryTokens.length === 1 && queryTokens[0].length >= 4) {
-          isTokenMatch = normalizedItemTitle.includes(queryTokens[0]);
+        // Subtitle & Root match: e.g. "The Witcher 3" matches "The Witcher 3: Wild Hunt"
+        const isRootMatch =
+          normalizedRootTitle.length >= 3 &&
+          (normalizedItemTitle === normalizedRootTitle ||
+            normalizedItemTitle.startsWith(normalizedRootTitle));
+
+        // Root token verification: Repack MUST contain the primary franchise / root tokens
+        const itemTokens = new Set(normalizedItemTitle.split(" "));
+        let hasAllRootTokens = false;
+        if (rootTokens.length >= 2) {
+          hasAllRootTokens = rootTokens.every((token) => itemTokens.has(token) || normalizedItemTitle.includes(token));
+        } else if (rootTokens.length === 1 && rootTokens[0].length >= 3) {
+          hasAllRootTokens = itemTokens.has(rootTokens[0]) || normalizedItemTitle.startsWith(rootTokens[0]);
         }
 
-        let isCoreTokenMatch = false;
-        if (coreQueryTokens.length >= 2) {
-          isCoreTokenMatch = coreQueryTokens.every((token) =>
-            normalizedItemTitle.includes(token)
-          );
-        } else if (coreQueryTokens.length === 1 && coreQueryTokens[0].length >= 4) {
-          isCoreTokenMatch = normalizedItemTitle.includes(coreQueryTokens[0]);
-        }
-
-        // If game has distinct sequence numbers (e.g. 2, 3), avoid matching a predecessor without that number
+        // Sequence number consistency: "Red Dead Redemption 2" vs "Red Dead Redemption"
         if (gameNumberTokens.length > 0 && !isExact) {
-          const itemTokens = new Set(normalizedItemTitle.split(" "));
           const hasMissingNumber = gameNumberTokens.some((num) => !itemTokens.has(num));
           if (hasMissingNumber) return;
+        } else if (gameNumberTokens.length === 0 && !isExact && rootTokens.length > 0) {
+          // If the game has NO sequence number (e.g. Red Dead Redemption 1), do not match a sequel like RDR 2
+          const itemNumberTokens = normalizedItemTitle.split(" ").filter((t) => /^\d+$/.test(t));
+          if (itemNumberTokens.some((num) => ["2", "3", "4", "5", "6", "7", "8", "9"].includes(num))) {
+            return;
+          }
         }
 
-        // Must be exact, prefix, or contain game title/tokens. Never allow game title to match a random unrelated repack.
-        if (isExact || isStartsWith || itemContainsGame || gameContainsItem || isTokenMatch || isCoreTokenMatch) {
-          results.push({
-            id: `${sourceKey}-${index}`,
-            title: item.title,
-            fileSize: item.fileSize ?? null,
-            uris: Array.isArray(item.uris) ? item.uris : [],
-            uriGroups: Array.isArray(item.uriGroups)
-              ? item.uriGroups
-              : undefined,
-            unavailableUris: [],
-            uploadDate: item.uploadDate ?? null,
-            downloadSourceId: sourceKey,
-            downloadSourceName: displayName,
-            createdAt: new Date().toISOString(),
-          });
+        // Mandatory check: Must be exact, root match, contain the full game title, or match all root tokens
+        const isCandidate = isExact || isStartsWith || itemContainsGame || isRootMatch || hasAllRootTokens;
+        if (!isCandidate) return;
+
+        // Prevent false positives where an unrelated repack shares only a generic subtitle word
+        if (!isExact && rootTokens.length > 0 && !hasAllRootTokens && !itemContainsGame) {
+          return;
         }
+
+        results.push({
+          id: `${sourceKey}-${index}`,
+          title: item.title,
+          fileSize: item.fileSize ?? null,
+          uris: Array.isArray(item.uris) ? item.uris : [],
+          uriGroups: Array.isArray(item.uriGroups)
+            ? item.uriGroups
+            : undefined,
+          unavailableUris: [],
+          uploadDate: item.uploadDate ?? null,
+          downloadSourceId: sourceKey,
+          downloadSourceName: displayName,
+          createdAt: new Date().toISOString(),
+        });
       });
     }
 
@@ -541,6 +554,20 @@ export const findDownloadsForGame = async (
       const bScore = bRank === -1 ? 99 : bRank;
       return aScore - bScore;
     });
+
+    // Deduplicate repacks by download source + primary URI
+    const seenRepacks = new Set<string>();
+    const deduplicatedResults: GameRepack[] = [];
+    for (const r of results) {
+      const primaryUri = r.uris[0] || r.id;
+      const key = `${r.downloadSourceName}:${primaryUri}`;
+      if (!seenRepacks.has(key)) {
+        seenRepacks.add(key);
+        deduplicatedResults.push(r);
+      }
+    }
+
+    return deduplicatedResults;
   } catch (error) {
     logger.error("[DownloadSourcesStorage] Error searching downloads for game", error);
   }

@@ -8,7 +8,7 @@ import { logger } from "@renderer/logger";
 
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { SyncIcon } from "@primer/octicons-react";
+import { LinkExternalIcon, SyncIcon } from "@primer/octicons-react";
 import "./add-download-source-modal.scss";
 
 interface AddDownloadSourceModalProps {
@@ -95,6 +95,19 @@ export function AddDownloadSourceModal({
       clickOutsideToClose={!isLoading}
     >
       <div className="add-download-source-modal__container">
+        <div style={{ marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.7)" }}>Looking for tested download sources?</span>
+          <Button
+            type="button"
+            theme="outline"
+            style={{ fontSize: "12px", padding: "4px 10px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+            onClick={() => window.electron.openExternal("https://library.hydra.wiki/sources/")}
+          >
+            <LinkExternalIcon size={12} />
+            <span>Browse Hydra Library</span>
+          </Button>
+        </div>
+
         <form onSubmit={handleSubmit(onSubmit)}>
           <TextField
             {...register("url")}

@@ -1,4 +1,3 @@
-import { DownloadIcon, PeopleIcon } from "@primer/octicons-react";
 import type { GameStats, ShopAssets } from "@types";
 
 import EpicLogo from "@renderer/assets/epic-integration-logo.svg?react";
@@ -8,9 +7,7 @@ import "./game-card.scss";
 
 import { useTranslation } from "react-i18next";
 import { Badge } from "../badge/badge";
-import { StarRating } from "../star-rating/star-rating";
 import { useCallback, useState } from "react";
-import { useFormat } from "@renderer/hooks";
 
 export interface GameCardProps
   extends React.DetailedHTMLProps<
@@ -55,8 +52,6 @@ export function GameCard({ game, ...props }: GameCardProps) {
         .catch(() => {});
     }
   };
-
-  const { numberFormatter } = useFormat();
 
   return (
     <button
@@ -105,24 +100,6 @@ export function GameCard({ game, ...props }: GameCardProps) {
           ) : (
             <p className="game-card__no-download-label">{t("no_downloads")}</p>
           )}
-
-          <div className="game-card__specifics">
-            <div className="game-card__specifics-item">
-              <DownloadIcon />
-              <span>
-                {stats ? numberFormatter.format(stats.downloadCount) : "…"}
-              </span>
-            </div>
-            <div className="game-card__specifics-item">
-              <PeopleIcon />
-              <span>
-                {stats ? numberFormatter.format(stats.playerCount) : "…"}
-              </span>
-            </div>
-            <div className="game-card__specifics-item">
-              <StarRating rating={stats?.averageScore || null} size={14} />
-            </div>
-          </div>
         </div>
       </div>
     </button>

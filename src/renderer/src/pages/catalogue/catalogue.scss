@@ -111,15 +111,24 @@
   }
 
   &__content {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(300px, 22vw, 380px);
+    display: flex;
+    flex-direction: column;
     gap: calc(globals.$spacing-unit * 2);
-    align-items: start;
+    width: 100%;
+    align-items: stretch;
+  }
+
+  &__filters-container {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px;
   }
 
   &__games-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 16px;
     width: 100%;
     min-width: 0;
@@ -155,11 +164,7 @@
     border: solid 1px rgba(255, 255, 255, 0.15);
   }
 
-  @media (max-width: 1024px) {
-    &__content {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
+
 
   @media (max-width: 768px) {
     &__header-row {

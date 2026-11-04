@@ -687,6 +687,7 @@ const hydraApiCall = async (
     // Default catalogue view when no search term provided
     const categories = await getSteamFeaturedCategories();
     const seen = new Set<number>();
+    const seenTitleRoots = new Set<string>();
     const allItems: any[] = [];
 
     const lists = [
@@ -701,6 +702,13 @@ const hydraApiCall = async (
       if (Array.isArray(list)) {
         for (const item of list) {
           if (item?.id && !seen.has(item.id) && !isNonGameItem(item)) {
+            const rootKey = (item.name || "")
+              .toLowerCase()
+              .replace(/[\(（\[【].*?[\)）\]】]/g, "")
+              .replace(/[:\-—–|/].*$/, "")
+              .trim();
+            if (rootKey && seenTitleRoots.has(rootKey)) continue;
+            if (rootKey) seenTitleRoots.add(rootKey);
             seen.add(item.id);
             allItems.push(item);
           }

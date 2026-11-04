@@ -5,6 +5,7 @@ import {
   PlusCircleIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  LinkExternalIcon,
 } from "@primer/octicons-react";
 import { Tooltip } from "react-tooltip";
 
@@ -448,7 +449,7 @@ export function RepacksModal({
                     <div className="repacks-modal__no-results-text">
                       {t("no_repacks_found")}
                     </div>
-                    <div className="repacks-modal__no-results-button">
+                    <div className="repacks-modal__no-results-button" style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>
                       <Button
                         type="button"
                         theme="primary"
@@ -459,6 +460,14 @@ export function RepacksModal({
                       >
                         <PlusCircleIcon />
                         {t("add_download_source", { ns: "settings" })}
+                      </Button>
+                      <Button
+                        type="button"
+                        theme="outline"
+                        onClick={() => window.electron.openExternal("https://library.hydra.wiki/sources/")}
+                      >
+                        <LinkExternalIcon />
+                        Browse Hydra Library
                       </Button>
                     </div>
                   </div>

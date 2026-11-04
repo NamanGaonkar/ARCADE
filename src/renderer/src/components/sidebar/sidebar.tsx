@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -555,7 +556,24 @@ export function Sidebar() {
                 </li>
               ))}
 
-              <Tooltip id="sidebar-nav-tooltip" place="right" />
+              {createPortal(
+                <Tooltip
+                  id="sidebar-nav-tooltip"
+                  place="right"
+                  style={{
+                    zIndex: 999999,
+                    backgroundColor: "#161822",
+                    color: "#ffffff",
+                    borderRadius: "8px",
+                    padding: "6px 12px",
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
+                    fontSize: "12px",
+                    fontWeight: 500,
+                  }}
+                />,
+                document.body
+              )}
 
               {window.electron.platform === "linux" && homebrewFolderExists && (
                 <li className="sidebar__menu-item sidebar__menu-item--decky">
@@ -612,7 +630,24 @@ export function Sidebar() {
                 )}
               </button>
 
-              <Tooltip id="sidebar-show-playable-only-tooltip" place="top" />
+              {createPortal(
+                <Tooltip
+                  id="sidebar-show-playable-only-tooltip"
+                  place="top"
+                  style={{
+                    zIndex: 999999,
+                    backgroundColor: "#161822",
+                    color: "#ffffff",
+                    borderRadius: "8px",
+                    padding: "6px 12px",
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
+                    fontSize: "12px",
+                    fontWeight: 500,
+                  }}
+                />,
+                document.body
+              )}
 
               <SidebarFilterMenu
                 category={sidebarCategory}

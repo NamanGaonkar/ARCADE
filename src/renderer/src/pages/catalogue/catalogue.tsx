@@ -33,6 +33,7 @@ import { GameItem } from "./game-item";
 import { GameItemClassics } from "./game-item-classics";
 import { Pagination } from "./pagination";
 import { CategoryFilter } from "@renderer/pages/library/category-filter";
+import { FilterIcon } from "@primer/octicons-react";
 
 const ProtonCompatibilitySection = lazy(async () => {
   const mod = await import("./proton-compatibility-section");
@@ -141,6 +142,7 @@ export default function Catalogue() {
   }, [filters, deferredTitleFilter]);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const [results, setResults] = useState<CatalogueSearchResult[]>([]);
   const [resultsMode, setResultsMode] = useState(mode);
@@ -633,26 +635,52 @@ export default function Catalogue() {
             </div>
           </div>
 
-          <div className="catalogue__sort-inline">
-            <span className="catalogue__sort-label">{t("sort_by")}</span>
-            <SelectField
-              theme="dark"
-              className="catalogue__sort-select"
-              value={
-                sortValues.includes(selectedSortValue as CatalogueSortValue)
-                  ? selectedSortValue
-                  : "popularity:desc"
-              }
-              options={sortOptions}
-              onChange={(event) => {
-                const [sortBy, sortOrder] = event.target.value.split(":") as [
-                  CatalogueSearchPayload["sortBy"],
-                  CatalogueSearchPayload["sortOrder"],
-                ];
+          <div className="catalogue__controls-inline" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <Button
+              type="button"
+              theme={isFiltersOpen ? "primary" : "outline"}
+              className="catalogue__filter-toggle-button"
+              onClick={() => setIsFiltersOpen((prev) => !prev)}
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "36px", padding: "0 12px" }}
+            >
+              <FilterIcon size={14} />
+              <span>{t("filters", { defaultValue: "Filters" })}</span>
+              {selectedFiltersCount > 0 && (
+                <span
+                  style={{
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                    borderRadius: "10px",
+                    padding: "1px 6px",
+                    fontSize: "11px",
+                    fontWeight: 600,
+                  }}
+                >
+                  {selectedFiltersCount}
+                </span>
+              )}
+            </Button>
 
-                dispatch(setFilters({ sortBy, sortOrder }));
-              }}
-            />
+            <div className="catalogue__sort-inline">
+              <span className="catalogue__sort-label">{t("sort_by")}</span>
+              <SelectField
+                theme="dark"
+                className="catalogue__sort-select"
+                value={
+                  sortValues.includes(selectedSortValue as CatalogueSortValue)
+                    ? selectedSortValue
+                    : "popularity:desc"
+                }
+                options={sortOptions}
+                onChange={(event) => {
+                  const [sortBy, sortOrder] = event.target.value.split(":") as [
+                    CatalogueSearchPayload["sortBy"],
+                    CatalogueSearchPayload["sortOrder"],
+                  ];
+
+                  dispatch(setFilters({ sortBy, sortOrder }));
+                }}
+              />
+            </div>
           </div>
         </div>
 
@@ -753,8 +781,9 @@ export default function Catalogue() {
           </div>
         </div>
 
-        <div className="catalogue__filters-container">
-          <div className="catalogue__filters-sections">
+        {isFiltersOpen && (
+          <div className="catalogue__filters-container">
+            <div className="catalogue__filters-sections">
             {mode === "modern" && shouldShowProtonFeatures && (
               <Suspense fallback={null}>
                 <ProtonCompatibilitySection
@@ -864,8 +893,9 @@ export default function Catalogue() {
                   />
                 );
               })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
