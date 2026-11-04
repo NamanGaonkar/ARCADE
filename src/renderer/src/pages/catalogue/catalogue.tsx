@@ -211,7 +211,7 @@ export default function Catalogue() {
           }
         }
       },
-      500
+      120
     )
   ).current;
 

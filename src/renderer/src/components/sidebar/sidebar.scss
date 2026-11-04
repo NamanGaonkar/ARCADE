@@ -30,8 +30,52 @@
       }
     }
 
-    .sidebar__section--games {
+    .sidebar__search-row {
       display: none !important;
+    }
+
+    .sidebar__section--games {
+      display: flex !important;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      margin-top: 6px;
+      padding-top: 6px;
+      overflow: hidden;
+    }
+
+    .sidebar__game-list {
+      width: 100% !important;
+    }
+
+    .sidebar__game-list-scroll {
+      width: 100% !important;
+      overflow-x: hidden !important;
+      padding-right: 0 !important;
+    }
+
+    .sidebar__game-item {
+      .sidebar__menu-item-button {
+        justify-content: center !important;
+        padding: 6px 0 !important;
+        width: 100% !important;
+        position: relative;
+
+        .sidebar__menu-item-button-label,
+        .sidebar__game-badge {
+          display: none !important;
+        }
+
+        .sidebar__game-favorite-icon {
+          display: block !important;
+          position: absolute;
+          bottom: 4px;
+          right: 14px;
+          color: #ff4757;
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+        }
+      }
     }
 
     .sidebar__content {

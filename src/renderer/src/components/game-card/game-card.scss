@@ -47,7 +47,6 @@
     gap: globals.$spacing-unit;
     flex-direction: column;
     transition: all ease 0.2s;
-    transform: translateY(24px);
   }
 
   &__title {
@@ -103,8 +102,5 @@
 
   &:hover &__cover {
     transform: scale(1.05);
-  }
-  &:hover &__content {
-    transform: translateY(0px);
   }
 }

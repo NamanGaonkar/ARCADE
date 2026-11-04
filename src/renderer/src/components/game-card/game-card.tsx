@@ -5,8 +5,6 @@ import SteamLogo from "@renderer/assets/steam-logo.svg?react";
 
 import "./game-card.scss";
 
-import { useTranslation } from "react-i18next";
-import { Badge } from "../badge/badge";
 import { useCallback, useState } from "react";
 
 export interface GameCardProps
@@ -23,8 +21,6 @@ const shopIcon = {
 };
 
 export function GameCard({ game, ...props }: GameCardProps) {
-  const { t } = useTranslation("game_card");
-
   const [stats, setStats] = useState<GameStats | null>(null);
   const [currentCover, setCurrentCover] = useState<string | null>(
     game.coverImageUrl || game.libraryHeroImageUrl || game.libraryImageUrl || game.iconUrl || null
@@ -78,28 +74,6 @@ export function GameCard({ game, ...props }: GameCardProps) {
             {shopIcon[game.shop]}
             <p className="game-card__title">{game.title}</p>
           </div>
-
-          {game.downloadSources.length > 0 ? (
-            <ul className="game-card__download-options">
-              {game.downloadSources.slice(0, 3).map((sourceName) => (
-                <li key={sourceName}>
-                  <Badge>{sourceName}</Badge>
-                </li>
-              ))}
-              {game.downloadSources.length > 3 && (
-                <li>
-                  <Badge>
-                    +{game.downloadSources.length - 3}{" "}
-                    {t("game_card:available", {
-                      count: game.downloadSources.length - 3,
-                    })}
-                  </Badge>
-                </li>
-              )}
-            </ul>
-          ) : (
-            <p className="game-card__no-download-label">{t("no_downloads")}</p>
-          )}
         </div>
       </div>
     </button>

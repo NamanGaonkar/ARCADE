@@ -12,9 +12,32 @@ const addDownloadSource = async (
   _event: Electron.IpcMainInvokeEvent,
   url: string
 ): Promise<DownloadSource> => {
-  const cleanUrl = (url || "").trim();
+  let cleanUrl = (url || "").trim();
   if (!cleanUrl) {
     throw new Error("Invalid URL provided");
+  }
+
+  // Handle deep link protocol wrapper if pasted directly (e.g. hydra://install-source?urls=https://...)
+  if (
+    cleanUrl.startsWith("hydra://") ||
+    cleanUrl.startsWith("hydralauncher://") ||
+    cleanUrl.startsWith("arcadex://")
+  ) {
+    try {
+      const parsed = new URL(cleanUrl);
+      const target =
+        parsed.searchParams.get("urls") ||
+        parsed.searchParams.get("url") ||
+        parsed.searchParams.get("source");
+      if (target) {
+        cleanUrl = target.trim();
+      }
+    } catch {
+      const match = cleanUrl.match(/[?&](?:urls?|source)=([^&]+)/i);
+      if (match?.[1]) {
+        cleanUrl = decodeURIComponent(match[1]).trim();
+      }
+    }
   }
 
   try {
@@ -29,7 +52,7 @@ const addDownloadSource = async (
 
     let data: any = null;
 
-    // First attempt: Electron native net.fetch (uses Chromium network stack and TLS fingerprint)
+    // First attempt: Electron native net.fetch (uses Chromium network stack, TLS fingerprint, handles Cloudflare)
     try {
       const netRes = await net.fetch(cleanUrl, {
         headers: {
@@ -40,7 +63,9 @@ const addDownloadSource = async (
       });
 
       if (netRes.ok) {
-        data = await netRes.json();
+        const text = await netRes.text();
+        const sanitized = text.replace(/^\uFEFF/, "").trim();
+        data = JSON.parse(sanitized);
       } else {
         logger.warn(
           `[addDownloadSource] net.fetch returned HTTP ${netRes.status}, falling back to axios`
@@ -58,13 +83,16 @@ const addDownloadSource = async (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 ArcadeX/1.0.9",
           Accept: "application/json, text/plain, */*",
         },
+        responseType: "text",
         timeout: 25000,
       });
 
-      data =
+      const rawText =
         typeof response.data === "string"
-          ? JSON.parse(response.data)
-          : response.data;
+          ? response.data
+          : JSON.stringify(response.data);
+      const sanitized = rawText.replace(/^\uFEFF/, "").trim();
+      data = JSON.parse(sanitized);
     }
 
     if (!data || (typeof data !== "object" && !Array.isArray(data))) {

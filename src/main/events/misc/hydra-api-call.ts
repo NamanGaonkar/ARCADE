@@ -34,6 +34,10 @@ let cachedCategories: any = null;
 let lastCategoriesFetch = 0;
 const CATEGORIES_CACHE_TTL = 5 * 60 * 1000;
 
+let cachedCatalogueEdges: CatalogueSearchResult[] | null = null;
+let lastCatalogueFetch = 0;
+const CATALOGUE_CACHE_TTL = 3 * 60 * 1000;
+
 async function getSteamFeaturedCategories(): Promise<any> {
   const now = Date.now();
   if (cachedCategories && now - lastCategoriesFetch < CATEGORIES_CACHE_TTL) {
@@ -685,6 +689,16 @@ const hydraApiCall = async (
     }
 
     // Default catalogue view when no search term provided
+    const now = Date.now();
+    if (cachedCatalogueEdges && now - lastCatalogueFetch < CATALOGUE_CACHE_TTL) {
+      const edgesCopy = [...cachedCatalogueEdges];
+      sortEdges(edgesCopy);
+      return {
+        edges: edgesCopy.slice(skip, skip + take),
+        count: edgesCopy.length,
+      };
+    }
+
     const categories = await getSteamFeaturedCategories();
     const seen = new Set<number>();
     const seenTitleRoots = new Set<string>();
@@ -716,32 +730,30 @@ const hydraApiCall = async (
       }
     }
 
+    // Direct and instant: Use Steam Akamai CDN cover images and in-memory source matching without 40 blocking web requests
     const edges: CatalogueSearchResult[] = await Promise.all(
       allItems.slice(0, 40).map(async (item) => {
-        const [sources, lb] = await Promise.all([
-          getMatchingSourceNamesForGame(item.name).catch(() => []),
-          LizardByteDBService.fetchGameByTitle(item.name).catch(() => null),
-        ]);
+        const sources = await getMatchingSourceNamesForGame(item.name).catch(() => []);
         const cleanSources = sources.filter(
           (s) => !/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s)
         );
-        const genres = resolveSmartGenres(item.name, lb?.genres);
+        const genres = resolveSmartGenres(item.name);
         return {
           id: String(item.id),
           objectId: String(item.id),
           title: item.name,
           shop: "steam" as const,
           genres,
-          releaseYear: lb?.releaseDate ? new Date(lb.releaseDate).getFullYear() : null,
-          libraryImageUrl:
-            lb?.coverUrl ||
-            `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${item.id}/library_600x900.jpg`,
+          releaseYear: null,
+          libraryImageUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${item.id}/library_600x900.jpg`,
           downloadSources: cleanSources,
         };
       })
     );
 
     sortEdges(edges);
+    cachedCatalogueEdges = edges;
+    lastCatalogueFetch = now;
 
     return {
       edges: edges.slice(skip, skip + take),

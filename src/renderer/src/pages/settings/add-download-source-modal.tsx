@@ -31,7 +31,20 @@ export function AddDownloadSourceModal({
   const { t } = useTranslation("settings");
 
   const schema = yup.object().shape({
-    url: yup.string().required(t("required_field")).url(t("must_be_valid_url")),
+    url: yup
+      .string()
+      .required(t("required_field"))
+      .test("is-valid-url", t("must_be_valid_url"), (value) => {
+        if (!value) return false;
+        const trimmed = value.trim();
+        return (
+          trimmed.startsWith("http://") ||
+          trimmed.startsWith("https://") ||
+          trimmed.startsWith("hydra://") ||
+          trimmed.startsWith("hydralauncher://") ||
+          trimmed.startsWith("arcadex://")
+        );
+      }),
   });
 
   const {
@@ -51,7 +64,23 @@ export function AddDownloadSourceModal({
     setIsLoading(true);
 
     try {
-      await window.electron.addDownloadSource(values.url);
+      let finalUrl = values.url.trim();
+      if (
+        finalUrl.startsWith("hydra://") ||
+        finalUrl.startsWith("hydralauncher://") ||
+        finalUrl.startsWith("arcadex://")
+      ) {
+        try {
+          const parsed = new URL(finalUrl);
+          const target =
+            parsed.searchParams.get("urls") ||
+            parsed.searchParams.get("url") ||
+            parsed.searchParams.get("source");
+          if (target) finalUrl = target.trim();
+        } catch {}
+      }
+
+      await window.electron.addDownloadSource(finalUrl);
 
       onClose();
       onAddDownloadSource();

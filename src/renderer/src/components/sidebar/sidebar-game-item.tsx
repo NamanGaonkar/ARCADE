@@ -110,6 +110,8 @@ export const SidebarGameItem = memo(function SidebarGameItem({
         <button
           type="button"
           className="sidebar__menu-item-button"
+          data-tooltip-id="sidebar-nav-tooltip"
+          data-tooltip-content={getGameTitle(game)}
           onClick={(event) => {
             handleSidebarGameClick(game);
             if (event.detail === 2) {

@@ -432,13 +432,20 @@ export const findDownloadsForGame = async (
     const dir = getSourcesDir();
     const files = await fs.promises.readdir(dir).catch(() => []);
 
+    // Load registered source records from LevelDB to get friendly names for UUID-keyed sources
+    const dbSourcesMap = new Map<string, string>();
+    try {
+      const allSources = await downloadSourcesSublevel.values().all();
+      for (const s of allSources) {
+        if (s.id && s.name) {
+          dbSourcesMap.set(s.id.toLowerCase(), s.name);
+        }
+      }
+    } catch {}
+
     for (const file of files) {
       if (!file.endsWith(".json")) continue;
       const sourceKey = file.replace(/\.json$/, "");
-      // Skip raw UUID orphan files
-      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sourceKey)) {
-        continue;
-      }
       const filePath = path.join(dir, file);
 
       let downloads = inMemoryDownloadsCache.get(sourceKey);
@@ -465,7 +472,7 @@ export const findDownloadsForGame = async (
       if (!downloads || !Array.isArray(downloads)) continue;
 
       const lowerKey = sourceKey.toLowerCase();
-      let displayName = sourceName;
+      let displayName = dbSourcesMap.get(lowerKey) || sourceName;
       if (lowerKey.includes("fitgirl")) displayName = "FitGirl Repacks";
       else if (lowerKey.includes("dodi")) displayName = "DODI Repacks";
       else if (lowerKey.includes("steamrip")) displayName = "SteamRip [Direct Download]";
@@ -501,19 +508,30 @@ export const findDownloadsForGame = async (
           hasAllRootTokens = itemTokens.has(rootTokens[0]) || normalizedItemTitle.startsWith(rootTokens[0]);
         }
 
-        // Sequence number consistency: "Red Dead Redemption 2" vs "Red Dead Redemption"
-        if (gameNumberTokens.length > 0 && !isExact) {
-          const hasMissingNumber = gameNumberTokens.some((num) => !itemTokens.has(num));
-          if (hasMissingNumber) return;
-        } else if (gameNumberTokens.length === 0 && !isExact && rootTokens.length > 0) {
-          // If the game has NO sequence number (e.g. Red Dead Redemption 1), do not match a sequel like RDR 2
-          const itemNumberTokens = normalizedItemTitle.split(" ").filter((t) => /^\d+$/.test(t));
-          if (itemNumberTokens.some((num) => ["2", "3", "4", "5", "6", "7", "8", "9"].includes(num))) {
+        // Clean version/build tokens so version numbers like "v1.2", "v2.0", "Build 2" are not confused with sequel titles
+        const cleanItemTitleForSequels = normalizedItemTitle
+          .replace(/\bv?\d+(\s*\.\s*\d+)+\b/gi, " ")
+          .replace(/\b(build|update|patch|v|version)\s*\d+\b/gi, " ")
+          .replace(/\b(19|20)\d{2}\b/g, " ");
+
+        // Sequel check: If base game has NO number (e.g. Red Dead Redemption), do not match a sequel like "Red Dead Redemption 2"
+        if (gameNumberTokens.length === 0 && !isExact && normalizedRootTitle.length >= 3) {
+          const escapedRoot = normalizedRootTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const sequelRegex = new RegExp(`\\b${escapedRoot}\\s+(2|ii|3|iii|4|iv|5|v|6|vi|7|vii|8|viii|9|ix)\\b`, "i");
+          if (sequelRegex.test(cleanItemTitleForSequels)) {
             return;
           }
+        } else if (gameNumberTokens.length > 0 && !isExact) {
+          // If the game HAS sequence numbers (e.g. "2" in RDR 2), repack must contain it or roman numeral
+          const romanMap: Record<string, string> = { "1": "i", "2": "ii", "3": "iii", "4": "iv", "5": "v", "6": "vi", "7": "vii" };
+          const hasMissingNumber = gameNumberTokens.some((num) => {
+            const roman = romanMap[num];
+            return !itemTokens.has(num) && (!roman || !itemTokens.has(roman));
+          });
+          if (hasMissingNumber) return;
         }
 
-        // Mandatory check: Must be exact, root match, contain the full game title, or match all root tokens
+        // Candidate check: exact match, root match, full substring match, or matches all root tokens
         const isCandidate = isExact || isStartsWith || itemContainsGame || isRootMatch || hasAllRootTokens;
         if (!isCandidate) return;
 
@@ -582,12 +600,14 @@ export const getMatchingSourceNamesForGame = async (
   return Array.from(
     new Set(
       repacks
-        .map((r) => r.downloadSourceName)
-        .filter(
-          (name): name is string =>
-            Boolean(name) &&
-            !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(name)
-        )
+        .map((r) => {
+          if (!r.downloadSourceName) return null;
+          if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r.downloadSourceName)) {
+            return "Community Repack";
+          }
+          return r.downloadSourceName;
+        })
+        .filter((name): name is string => Boolean(name))
     )
   );
 };
